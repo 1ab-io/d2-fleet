@@ -11,6 +11,11 @@ SHELL = /usr/bin/env bash -o pipefail
 REPOSITORY ?= https://github.com/controlplaneio-fluxcd/d2-fleet
 REGISTRY ?= ghcr.io/controlplaneio-fluxcd/d2-fleet
 
+# Local testing
+CLUSTER_NAME ?= talos-default
+# NOTE: qemu requires sudo -E
+PROVISIONER ?= docker
+
 .PHONY: all
 all: push bootstrap-staging
 
@@ -23,10 +28,19 @@ help: ## Display this help.
 ##@ Cluster
 
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
-	./scripts/kind-up.sh
+	# ./scripts/kind-up.sh
+	talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
+# --controlplanes=${CONTROL_PLANE_COUNT} \
+# --workers=${WORKER_COUNT} \
+# --talos-version="$TALOS_VERSION" \
+# --wait=false \
+# --wait-timeout=$timeout \
+# --with-debug \
+# --with-json-logs \
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
-	./scripts/kind-down.sh
+	# ./scripts/kind-down.sh
+	talosctl cluster destroy --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
 
 ##@ Artifacts
 
