@@ -23,7 +23,7 @@ spec:
     kind: OCIRepository
     url: "oci://ghcr.io/controlplaneio-fluxcd/d2-fleet"
     ref: "latest-stable"
-    path: "clusters/prod-us"
+    path: "clusters/production"
     pullSecret: "ghcr-auth"
   kustomize:
     patches:

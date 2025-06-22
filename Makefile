@@ -70,7 +70,7 @@ bootstrap-production: ## Deploy Flux Operator on the production Kubernetes clust
 	  --docker-username=flux \
 	  --docker-password=$$GITHUB_TOKEN
 
-	kubectl apply -f clusters/prod-eu/flux-system/flux-instance.yaml
+	kubectl apply -f clusters/production/flux-system/flux-instance.yaml
 
 	kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
 
