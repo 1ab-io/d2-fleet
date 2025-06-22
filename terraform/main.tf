@@ -59,7 +59,7 @@ resource "helm_release" "flux_operator" {
   wait       = true
 
   values = [
-    file("values/operator.yaml")
+    file("${path.module}/values/operator.yaml")
   ]
 }
 
@@ -74,7 +74,7 @@ resource "helm_release" "flux_instance" {
 
   // Configure the Flux components and kustomize patches.
   values = [
-    file("values/instance.yaml")
+    file("${path.module}/values/instance.yaml")
   ]
 
   // Configure the Flux distribution.
