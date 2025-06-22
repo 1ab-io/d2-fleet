@@ -1,4 +1,14 @@
 instance:
+  distribution:
+    version: ${distribution_version}
+    registry: ${distribution_registry}
+    artifact: ${distribution_artifact}
+  sync:
+    kind: ${sync_kind}
+    url: ${sync_url}
+    path: ${sync_path}
+    ref: ${sync_kind}
+    pullSecret: ${sync_pull_secret}
   components:
     - source-controller
     - kustomize-controller

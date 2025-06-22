@@ -74,42 +74,17 @@ resource "helm_release" "flux_instance" {
 
   // Configure the Flux components and kustomize patches.
   values = [
-    file("${path.module}/values/instance.yaml")
+    templatefile("${path.module}/values/instance.yaml", {
+
+      distribution_version  = var.flux_version
+      distribution_registry = var.flux_registry
+      distribution_artifact = "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:latest"
+
+      sync_kind        = "OCIRepository"
+      sync_url         = var.oci_url
+      sync_path        = var.oci_path
+      sync_ref         = var.oci_tag
+      sync_pull_secret = "ghcr-auth"
+    })
   ]
-
-  // Configure the Flux distribution.
-  set {
-    name  = "instance.distribution.version"
-    value = var.flux_version
-  }
-  set {
-    name  = "instance.distribution.registry"
-    value = var.flux_registry
-  }
-  set {
-    name  = "instance.distribution.artifact"
-    value = "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:latest"
-  }
-
-  // Configure Flux sync from GitHub Container Registry.
-  set {
-    name  = "instance.sync.kind"
-    value = "OCIRepository"
-  }
-  set {
-    name  = "instance.sync.url"
-    value = var.oci_url
-  }
-  set {
-    name  = "instance.sync.path"
-    value = var.oci_path
-  }
-  set {
-    name  = "instance.sync.ref"
-    value = var.oci_tag
-  }
-  set {
-    name  = "instance.sync.pullSecret"
-    value = "ghcr-auth"
-  }
 }
