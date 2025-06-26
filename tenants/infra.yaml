@@ -102,7 +102,7 @@ spec:
     - apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
-        name: infra-controllers
+        name: << inputs.tenant >>-controllers
         namespace: << inputs.tenant >>
       spec:
         targetNamespace: << inputs.tenant >>
@@ -123,11 +123,11 @@ spec:
     - apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
-        name: infra-configs
+        name: << inputs.tenant >>-configs
         namespace: << inputs.tenant >>
       spec:
         dependsOn:
-          - name: infra-controllers
+          - name: << inputs.tenant >>-controllers
         targetNamespace: << inputs.tenant >>
         serviceAccountName: flux
         interval: 30m
