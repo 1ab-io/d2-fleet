@@ -19,31 +19,9 @@ jobs:
       - name: Bootstrap Flux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          make bootstrap-staging
+        run: make bootstrap-staging
       - name: Verify cluster reconciliation
-        run: |
-          resources=(
-            Kustomization/flux-system/flux-system
-            ResourceSet/flux-system/infra
-            ResourceSet/flux-system/apps
-            Kustomization/backend/apps
-            Kustomization/frontend/apps
-          )
-
-          for resource in "${resources[@]}"; do
-            kind=$(echo $resource | awk -F/ '{print $1}')
-            namespace=$(echo $resource | awk -F/ '{print $2}')
-            name=$(echo $resource | awk -F/ '{print $3}')
-
-            kubectl -n $namespace wait $kind/$name --for=condition=ready --timeout=5m
-          done
+        run: make verify-cluster
       - name: Debug failure
         if: failure()
-        run: |
-          kubectl -n flux-system get all
-          kubectl -n flux-system logs deploy/flux-operator
-          kubectl -n flux-system logs deploy/source-controller
-          kubectl -n flux-system logs deploy/kustomize-controller
-          kubectl -n flux-system logs deploy/helm-controller
-          flux get all --all-namespaces
+        run: make debug-cluster

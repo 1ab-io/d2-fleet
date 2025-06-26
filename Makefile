@@ -11,11 +11,6 @@ SHELL = /usr/bin/env bash -o pipefail
 REPOSITORY ?= https://github.com/controlplaneio-fluxcd/d2-fleet
 REGISTRY ?= ghcr.io/controlplaneio-fluxcd/d2-fleet
 
-# Local testing
-CLUSTER_NAME ?= talos-default
-# NOTE: qemu requires sudo -E
-PROVISIONER ?= docker
-
 .PHONY: all
 all: push bootstrap-staging
 
@@ -29,7 +24,13 @@ help: ## Display this help.
 
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
 	# ./scripts/kind-up.sh
-	talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
+	kind create cluster
+
+# CLUSTER_NAME ?= talos-default
+# # NOTE: qemu requires sudo -E
+# PROVISIONER ?= docker
+
+# talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
 # --controlplanes=${CONTROL_PLANE_COUNT} \
 # --workers=${WORKER_COUNT} \
 # --talos-version="$TALOS_VERSION" \
@@ -40,7 +41,8 @@ cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to lo
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
 	# ./scripts/kind-down.sh
-	talosctl cluster destroy --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
+	kind delete cluster
+# talosctl cluster destroy --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
 
 ##@ Artifacts
 
@@ -110,3 +112,18 @@ bootstrap-update: ## Deploy Flux Operator on the image update automation Kuberne
 	kubectl apply -f clusters/update/flux-system/flux-instance.yaml
 
 	kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
+
+verify-cluster: # Verify cluster reconciliation
+	kubectl -n flux-system wait Kustomization/flux-system --for=condition=ready --timeout=5m
+	kubectl -n flux-system wait ResourceSet/infra --for=condition=ready --timeout=5m
+	kubectl -n flux-system wait ResourceSet/apps --for=condition=ready --timeout=5m
+	kubectl -n backend wait Kustomization/apps --for=condition=ready --timeout=5m
+	kubectl -n frontend wait Kustomization/apps --for=condition=ready --timeout=5m
+
+debug-cluster: # Debug failure
+	kubectl -n flux-system get all
+	kubectl -n flux-system logs deploy/flux-operator
+	kubectl -n flux-system logs deploy/source-controller
+	kubectl -n flux-system logs deploy/kustomize-controller
+	kubectl -n flux-system logs deploy/helm-controller
+	flux get all --all-namespaces
