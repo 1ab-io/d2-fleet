@@ -24,7 +24,7 @@ spec:
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: "external-sercrets"
+    - tenant: "external-secrets"
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
