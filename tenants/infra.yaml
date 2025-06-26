@@ -86,7 +86,7 @@ spec:
     - apiVersion: source.toolkit.fluxcd.io/v1beta2
       kind: OCIRepository
       metadata:
-        name: infra
+        name: << inputs.tenant >>
         namespace: << inputs.tenant >>
       spec:
         interval: 5m
@@ -113,7 +113,7 @@ spec:
         timeout: 5m
         sourceRef:
           kind: OCIRepository
-          name: infra
+          name: << inputs.tenant >>
         path: "./controllers/<< inputs.environment >>"
         prune: true
         postBuild:
@@ -136,7 +136,7 @@ spec:
         timeout: 5m
         sourceRef:
           kind: OCIRepository
-          name: infra
+          name: << inputs.tenant >>
         path: "./configs/<< inputs.environment >>"
         prune: true
         postBuild:
