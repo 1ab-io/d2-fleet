@@ -16,8 +16,8 @@ spec:
           fluxcd.controlplane.io/role: "policy"
       data:
         sources: >-
-          https://github.com/1ab.io/
-          oci://ghcr.io/1ab.io/
+          https://github.com/1ab-io/
+          oci://ghcr.io/1ab-io/
           https://github.com/controlplaneio-fluxcd/
           oci://ghcr.io/controlplaneio-fluxcd/
           oci://ghcr.io/stefanprodan/charts/

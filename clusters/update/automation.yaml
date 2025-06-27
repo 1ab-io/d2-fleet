@@ -15,7 +15,7 @@ spec:
       repository: "https://github.com/1ab-io/d2-apps.git"
       pushBranch: "image-updates"
     - namespace: "infra"
-      repository: "https://github.com/1ab.io/d2-infra.git"
+      repository: "https://github.com/1ab-io/d2-infra.git"
       pushBranch: "image-updates"
   resources:
     - apiVersion: v1
