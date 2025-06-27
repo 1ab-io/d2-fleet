@@ -19,7 +19,7 @@ instance:
     multitenant: true
     tenantDefaultServiceAccount: flux
     networkPolicy: true
-    domain: "cluster.local"
+    domain: ${cluster_domain}
   kustomize:
     patches:
       - target:
