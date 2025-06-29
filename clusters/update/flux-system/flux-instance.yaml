@@ -20,7 +20,7 @@ spec:
     multitenant: true
     tenantDefaultServiceAccount: flux
     networkPolicy: true
-    domain: "${CLUSTER_DOMAIN}"
+    # domain: "${CLUSTER_DOMAIN}"
   sync:
     kind: OCIRepository
     url: "oci://ghcr.io/1ab-io/d2-fleet"

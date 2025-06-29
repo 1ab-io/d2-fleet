@@ -39,8 +39,6 @@ cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to lo
 
 cluster-debug: ## Debug cluster
 	# docker logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
-
-	talosctl config info
 	kubectl config current-context
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
@@ -111,7 +109,7 @@ bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	#   --set tolerations[0].key=node.kubernetes.io/network-unavailable \
 	#   --set tolerations[1].key=node.kubernetes.io/not-ready \
 	#   --wait
-	sh -c 'set -eux; BRANCH=main; retry=false; for name in cilium cert-manager talos-ccm flux-operator; do kubectl apply --filename="https://raw.githubusercontent.com/1ab-io/d2-infra/refs/heads/$${BRANCH}/manifests/$${name}.yaml" || retry=true; done' # --force-conflicts=true --server-side=true --wait=false
+	sh -c 'set -eux; BRANCH=main; retry=false; for name in cert-manager flux-operator; do kubectl apply --filename="https://raw.githubusercontent.com/1ab-io/d2-infra/refs/heads/$${BRANCH}/manifests/$${name}.yaml" || retry=true; done' # --force-conflicts=true --server-side=true --wait=false
 
 	kubectl --namespace=flux-system create configmap flux-runtime-env \
 	  --from-literal=CLUSTER_DOMAIN=cluster.local \
@@ -127,6 +125,10 @@ bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	  | kubectl apply --filename=-
 
 	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
+
+	# kubectl delete --namespace=cilium cilium-configs
+	# kubectl delete --namespace=cilium cilium-controllers
+	# kubectl delete namespace cilium
 
 bootstrap-production: ## Deploy Flux Operator on the production Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
