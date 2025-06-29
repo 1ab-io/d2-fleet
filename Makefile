@@ -113,12 +113,18 @@ bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	#   --wait
 	sh -c 'set -eux; BRANCH=main; retry=false; for name in cilium cert-manager talos-ccm flux-operator; do kubectl apply --filename="https://raw.githubusercontent.com/1ab-io/d2-infra/refs/heads/$${BRANCH}/manifests/$${name}.yaml" || retry=true; done' # --force-conflicts=true --server-side=true --wait=false
 
+	kubectl --namespace=flux-system create configmap flux-runtime-env \
+	  --from-literal=CLUSTER_DOMAIN=cluster.local \
+	  --from-literal=CLUSTER_NAME=$(CLUSTER_NAME) || true
+
 	kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
 	  --docker-server=ghcr.io \
 	  --docker-username=flux \
-	  --docker-password=$$GITHUB_TOKEN
+	  --docker-password=$$GITHUB_TOKEN || true
 
-	kubectl apply --filename=clusters/staging/flux-system/flux-instance.yaml
+	cat clusters/staging/flux-system/flux-instance.yaml \
+	  | CLUSTER_DOMAIN=cluster.local envsubst \
+	  | kubectl apply --filename=-
 
 	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
 

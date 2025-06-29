@@ -20,6 +20,7 @@ spec:
           oci://ghcr.io/1ab-io/
           https://github.com/controlplaneio-fluxcd/
           oci://ghcr.io/controlplaneio-fluxcd/
+          oci://ghcr.io/siderolabs/charts/
           oci://ghcr.io/stefanprodan/charts/
           oci://registry-1.docker.io/bitnamicharts/
     - apiVersion: admissionregistration.k8s.io/v1
