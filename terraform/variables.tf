@@ -34,3 +34,9 @@ variable "flux_registry" {
   type        = string
   default     = "ghcr.io/fluxcd"
 }
+
+variable "cluster_domain" {
+  description = "Cluster domain"
+  type        = string
+  default     = "cluster.local"
+}

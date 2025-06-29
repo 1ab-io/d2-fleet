@@ -34,6 +34,13 @@ spec:
     - apiVersion: v1
       kind: ConfigMap
       metadata:
+        name: flux-runtime-env
+        namespace: << inputs.tenant >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-env"
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
         name: flux-runtime-info
         namespace: << inputs.tenant >>
         annotations:

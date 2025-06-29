@@ -86,7 +86,7 @@ resource "helm_release" "flux_instance" {
       sync_ref         = var.oci_tag
       sync_pull_secret = "ghcr-auth"
 
-      cluster_domain = "cluster.local"
+      cluster_domain = var.cluster_domain
     })
   ]
 }
