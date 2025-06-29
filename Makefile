@@ -22,27 +22,73 @@ help: ## Display this help.
 
 ##@ Cluster
 
+CLUSTER_NAME ?= talos-default
+# NOTE: qemu requires sudo -E
+PROVISIONER ?= docker
+
+CONTROL_PLANE_COUNT ?= 1
+WORKER_COUNT ?= 1
+TALOS_VERSION ?= 1.10.4
+WAIT ?= true
+TIMEOUT ?= 5m
+
+IPV4_ADDRESS ?= 10.5.0.2
+
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
-	# ./scripts/kind-up.sh
 	kind create cluster
 
-# CLUSTER_NAME ?= talos-default
-# # NOTE: qemu requires sudo -E
-# PROVISIONER ?= docker
+cluster-debug: ## Debug cluster
+	# docker logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
 
-# talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
-# --controlplanes=${CONTROL_PLANE_COUNT} \
-# --workers=${WORKER_COUNT} \
-# --talos-version="$TALOS_VERSION" \
-# --wait=false \
-# --wait-timeout=$timeout \
-# --with-debug \
-# --with-json-logs \
+	talosctl config info
+	kubectl config current-context
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
-	# ./scripts/kind-down.sh
 	kind delete cluster
-# talosctl cluster destroy --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
+
+talos-up: ## Creates a Kubernetes Talos cluste
+	echo "cluster: { network: { cni: { name: none } }, proxy: { disabled: true } }" \
+	  >"/tmp/patch.yaml"
+	talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER) \
+	  --controlplanes=$(CONTROL_PLANE_COUNT) \
+	  --workers=$(WORKER_COUNT) \
+	  --skip-k8s-node-readiness-check \
+	  --talos-version=$(TALOS_VERSION) \
+	  --wait=$(WAIT) \
+	  --wait-timeout=$(TIMEOUT) \
+	  --with-debug \
+	  --with-json-logs \
+	  --config-patch-control-plane="@/tmp/patch.yaml"
+	talosctl config contexts
+	kubectl config get-contexts
+
+talos-debug: ## Debug cluster
+	# docker logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
+	# talosctl dashboard --cluster=admin@talos-default --nodes=$(IPV4_ADDRESS)
+
+	talosctl config info
+	kubectl config current-context
+
+	talosctl cluster show --name=$(CLUSTER_NAME)
+
+	# kubectl config delete-context admin@$(CLUSTER_NAME)
+	# kubectl config rename-context admin@$(CLUSTER_NAME)-1 admin@$(CLUSTER_NAME)
+
+	# talosctl config context $(CLUSTER_NAME)
+	talosctl config contexts
+
+	# kubectl config use-context admin@$(CLUSTER_NAME)
+	kubectl config get-contexts
+
+	talosctl get members --nodes=$(IPV4_ADDRESS)
+
+	kubectl get nodes -o=wide
+
+talos-down: ## Shutdown the Kubernetes Talos cluster
+	talosctl cluster destroy --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER)
+	# talosctl config context ""
+	# talosctl config remove $(CLUSTER_NAME)
+	# kubectl config delete-context admin@$(CLUSTER_NAME)
 
 ##@ Artifacts
 
@@ -57,20 +103,24 @@ push: ## Push the Kubernetes manifests to Github Container Registry.
 bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
 
-	helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
-	  --namespace flux-system \
-	  --create-namespace \
-	  --set multitenancy.enabled=true \
-	  --wait
+	# helm uninstall flux-operator --namespace flux-system
+	# helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
+	#   --namespace flux-system \
+	#   --create-namespace \
+	#   --set multitenancy.enabled=true \
+	#   --set tolerations[0].key=node.kubernetes.io/network-unavailable \
+	#   --set tolerations[1].key=node.kubernetes.io/not-ready \
+	#   --wait
+	sh -c 'set -eux; BRANCH=main; retry=false; for name in cilium cert-manager talos-ccm flux-operator; do kubectl apply --filename="https://raw.githubusercontent.com/1ab-io/d2-infra/refs/heads/$${BRANCH}/manifests/$${name}.yaml" || retry=true; done' # --force-conflicts=true --server-side=true --wait=false
 
-	kubectl -n flux-system create secret docker-registry ghcr-auth \
+	kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
 	  --docker-server=ghcr.io \
 	  --docker-username=flux \
 	  --docker-password=$$GITHUB_TOKEN
 
-	kubectl apply -f clusters/staging/flux-system/flux-instance.yaml
+	kubectl apply --filename=clusters/staging/flux-system/flux-instance.yaml
 
-	kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
+	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
 
 bootstrap-production: ## Deploy Flux Operator on the production Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
@@ -81,14 +131,14 @@ bootstrap-production: ## Deploy Flux Operator on the production Kubernetes clust
 	  --set multitenancy.enabled=true \
 	  --wait
 
-	kubectl -n flux-system create secret docker-registry ghcr-auth \
+	kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
 	  --docker-server=ghcr.io \
 	  --docker-username=flux \
 	  --docker-password=$$GITHUB_TOKEN
 
-	kubectl apply -f clusters/production/flux-system/flux-instance.yaml
+	kubectl apply --filename=clusters/production/flux-system/flux-instance.yaml
 
-	kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
+	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
 
 bootstrap-update: ## Deploy Flux Operator on the image update automation Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set for GHCR}
@@ -100,30 +150,30 @@ bootstrap-update: ## Deploy Flux Operator on the image update automation Kuberne
 	  --set multitenancy.enabled=true \
 	  --wait
 
-	kubectl -n flux-system create secret docker-registry ghcr-auth \
+	kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
 	  --docker-server=ghcr.io \
 	  --docker-username=flux \
 	  --docker-password=$$GITHUB_TOKEN
 
-	kubectl -n flux-system create secret generic github-auth \
+	kubectl --namespace=flux-system create secret generic github-auth \
 	  --from-literal=username=flux \
 	  --from-literal=password=$$GH_UPDATE_TOKEN
 
-	kubectl apply -f clusters/update/flux-system/flux-instance.yaml
+	kubectl apply --filename=clusters/update/flux-system/flux-instance.yaml
 
-	kubectl -n flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
+	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=Ready --timeout=5m
 
 verify-cluster: # Verify cluster reconciliation
-	kubectl -n flux-system wait Kustomization/flux-system --for=condition=ready --timeout=5m
-	kubectl -n flux-system wait ResourceSet/infra --for=condition=ready --timeout=5m
-	kubectl -n flux-system wait ResourceSet/apps --for=condition=ready --timeout=5m
-	kubectl -n backend wait Kustomization/apps --for=condition=ready --timeout=5m
-	kubectl -n frontend wait Kustomization/apps --for=condition=ready --timeout=5m
+	kubectl --namespace=flux-system wait Kustomization/flux-system --for=condition=ready --timeout=5m
+	kubectl --namespace=flux-system wait ResourceSet/infra --for=condition=ready --timeout=5m
+	kubectl --namespace=flux-system wait ResourceSet/apps --for=condition=ready --timeout=5m
+	kubectl --namespace=backend wait Kustomization/apps --for=condition=ready --timeout=5m
+	kubectl --namespace=frontend wait Kustomization/apps --for=condition=ready --timeout=5m
 
 debug-cluster: # Debug failure
-	kubectl -n flux-system get all
-	kubectl -n flux-system logs deploy/flux-operator
-	kubectl -n flux-system logs deploy/source-controller
-	kubectl -n flux-system logs deploy/kustomize-controller
-	kubectl -n flux-system logs deploy/helm-controller
+	kubectl --namespace=flux-system get all
+	kubectl --namespace=flux-system logs deploy/flux-operator
+	kubectl --namespace=flux-system logs deploy/source-controller
+	kubectl --namespace=flux-system logs deploy/kustomize-controller
+	kubectl --namespace=flux-system logs deploy/helm-controller
 	flux get all --all-namespaces

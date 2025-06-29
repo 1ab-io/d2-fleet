@@ -37,6 +37,16 @@ spec:
           - op: add
             path: /spec/template/spec/containers/0/args/-
             value: --requeue-dependency=10s
+
+      # https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution
+      - target:
+          kind: Deployment
+          name: kustomize-controller
+        patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --feature-gates=StrictPostBuildSubstitutions=true
+
       - target:
           kind: OCIRepository
           name: flux-system
