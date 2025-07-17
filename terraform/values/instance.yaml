@@ -1,4 +1,17 @@
+---
+healthcheck:
+  enabled: true
 instance:
+  distribution:
+    version: ${distribution_version}
+    registry: ${distribution_registry}
+    artifact: ${distribution_artifact}
+  sync:
+    kind: ${sync_kind}
+    url: ${sync_url}
+    path: ${sync_path}
+    ref: ${sync_ref}
+    pullSecret: ${sync_pull_secret}
   components:
     - source-controller
     - kustomize-controller
@@ -9,7 +22,7 @@ instance:
     multitenant: true
     tenantDefaultServiceAccount: flux
     networkPolicy: true
-    domain: "cluster.local"
+    domain: ${cluster_domain}
   kustomize:
     patches:
       - target:
@@ -22,6 +35,16 @@ instance:
           - op: add
             path: /spec/template/spec/containers/0/args/-
             value: --requeue-dependency=10s
+
+      # https://fluxcd.io/flux/components/kustomize/kustomizations/#post-build-variable-substitution
+      - target:
+          kind: Deployment
+          name: kustomize-controller
+        patch: |
+          - op: add
+            path: /spec/template/spec/containers/0/args/-
+            value: --feature-gates=StrictPostBuildSubstitutions=true
+
       - target:
           kind: OCIRepository
           name: flux-system
@@ -32,4 +55,4 @@ instance:
               provider: cosign
               matchOIDCIdentity:
               - issuer: ^https://token\.actions\.githubusercontent\.com$
-                subject: ^https://github\.com/controlplaneio-fluxcd/d2-fleet/\.github/workflows/push-artifact\.yaml@refs/heads/main$
+                subject: ^https://github\.com/1ab-io/d2-fleet/\.github/workflows/push-artifact\.yaml@refs/heads/main$

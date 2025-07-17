@@ -8,7 +8,7 @@ variable "oci_token" {
 variable "oci_url" {
   description = "OCI repository URL"
   type        = string
-  default = "oci://ghcr.io/controlplaneio-fluxcd/d2-fleet"
+  default     = "oci://ghcr.io/1ab-io/d2-fleet"
 }
 
 variable "oci_path" {
@@ -33,4 +33,10 @@ variable "flux_registry" {
   description = "Flux distribution registry"
   type        = string
   default     = "ghcr.io/fluxcd"
+}
+
+variable "cluster_domain" {
+  description = "Cluster domain"
+  type        = string
+  default     = "cluster.local"
 }

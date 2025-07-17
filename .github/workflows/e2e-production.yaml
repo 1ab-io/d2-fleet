@@ -3,47 +3,25 @@ name: e2e-production
 on:
   workflow_dispatch:
   push:
-    tags: [ '*' ]
+    tags: ["*"]
 
 jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Flux
-      uses: controlplaneio-fluxcd/distribution/actions/setup@main
-    - name: Setup Helm
-      uses: fluxcd/pkg/actions/helm@main
-    - name: Setup Kubernetes
-      uses: helm/kind-action@main
-    - name: Bootstrap Flux
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        make bootstrap-production
-    - name: Verify cluster reconciliation
-      run: |
-        resources=(
-          Kustomization/flux-system/flux-system
-          ResourceSet/flux-system/infra
-          ResourceSet/flux-system/apps
-          Kustomization/backend/apps
-          Kustomization/frontend/apps
-        )
-
-        for resource in "${resources[@]}"; do
-          kind=$(echo $resource | awk -F/ '{print $1}')
-          namespace=$(echo $resource | awk -F/ '{print $2}')
-          name=$(echo $resource | awk -F/ '{print $3}')
-
-          kubectl -n $namespace wait $kind/$name --for=condition=ready --timeout=5m
-        done
-    - name: Debug failure
-      if: failure()
-      run: |
-        kubectl -n flux-system get all
-        kubectl -n flux-system logs deploy/flux-operator
-        kubectl -n flux-system logs deploy/source-controller
-        kubectl -n flux-system logs deploy/kustomize-controller
-        kubectl -n flux-system logs deploy/helm-controller
-        flux get all --all-namespaces
+      - uses: actions/checkout@v4
+      - name: Setup Flux
+        uses: controlplaneio-fluxcd/distribution/actions/setup@main
+      - name: Setup Helm
+        uses: fluxcd/pkg/actions/helm@main
+      - name: Setup Kubernetes
+        uses: helm/kind-action@main
+      - name: Bootstrap Flux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make bootstrap-production
+      - name: Verify cluster reconciliation
+        run: make verify-cluster
+      - name: Debug failure
+        if: failure()
+        run: make debug-cluster

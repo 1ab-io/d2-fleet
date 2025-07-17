@@ -11,7 +11,7 @@ metadata:
 data:
   ARTIFACT_TAG: latest
   ENVIRONMENT: staging
-  CLUSTER_NAME: staging-1
-  CLUSTER_DOMAIN: preview1.example.com
+  # CLUSTER_NAME: staging-1
+  # CLUSTER_DOMAIN: preview1.example.com
   ARTIFACT_SUBJECT_WORKFLOW: push-artifact
   ARTIFACT_SUBJECT_GIT_REF: refs/heads/main

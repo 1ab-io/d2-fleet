@@ -15,4 +15,6 @@ spec:
   postBuild:
     substituteFrom:
       - kind: ConfigMap
+        name: flux-runtime-env
+      - kind: ConfigMap
         name: flux-runtime-info

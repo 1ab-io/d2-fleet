@@ -21,10 +21,10 @@ spec:
     multitenant: true
     tenantDefaultServiceAccount: flux
     networkPolicy: true
-    domain: "cluster.local"
+    # domain: "${CLUSTER_DOMAIN}"
   sync:
     kind: OCIRepository
-    url: "oci://ghcr.io/controlplaneio-fluxcd/d2-fleet"
+    url: "oci://ghcr.io/1ab-io/d2-fleet"
     ref: "latest"
     path: "clusters/update"
     pullSecret: "ghcr-auth"
@@ -40,4 +40,4 @@ spec:
               provider: cosign
               matchOIDCIdentity:
               - issuer: ^https://token\.actions\.githubusercontent\.com$
-                subject: ^https://github\.com/controlplaneio-fluxcd/d2-fleet/\.github/workflows/push-artifact\.yaml@refs/heads/main$
+                subject: ^https://github\.com/1ab-io/d2-fleet/\.github/workflows/push-artifact\.yaml@refs/heads/main$
