@@ -10,7 +10,7 @@ metadata:
 data:
   ARTIFACT_TAG: latest-stable
   ENVIRONMENT: production
-  CLUSTER_NAME: prod-us-1
-  CLUSTER_DOMAIN: produs1.example.com
+  # CLUSTER_NAME: prod-eu-1
+  # CLUSTER_DOMAIN: prodeu1.example.com
   ARTIFACT_SUBJECT_WORKFLOW: release-artifact
   ARTIFACT_SUBJECT_GIT_REF: refs/tags/.*
