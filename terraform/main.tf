@@ -39,7 +39,7 @@ resource "kubernetes_secret" "git_auth" {
         "ghcr.io" : {
           username = "flux"
           password = var.oci_token
-          auth = base64encode(join(":", ["flux", var.oci_token]))
+          auth     = base64encode(join(":", ["flux", var.oci_token]))
         }
       }
     })
@@ -59,7 +59,7 @@ resource "helm_release" "flux_operator" {
   wait       = true
 
   values = [
-    file("values/operator.yaml")
+    file("${path.module}/values/operator.yaml")
   ]
 }
 
@@ -70,51 +70,23 @@ resource "helm_release" "flux_instance" {
   name       = "flux"
   namespace  = "flux-system"
   repository = "oci://ghcr.io/controlplaneio-fluxcd/charts"
-  chart = "flux-instance"
-
-  // Configure the Flux components and kustomize patches.
-  values = [
-    file("values/instance.yaml")
-  ]
+  chart      = "flux-instance"
 
   // Configure the Flux distribution and sync from GitHub Container Registry.
-  set = [
-    {
-      name  = "instance.distribution.version"
-      value = var.flux_version
-    },
-    {
-      name  = "instance.distribution.registry"
-      value = var.flux_registry
-    },
-    {
-      name  = "instance.distribution.artifact"
-      value = "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:latest"
-    },
-    {
-      name  = "instance.sync.kind"
-      value = "OCIRepository"
-    },
-    {
-      name  = "instance.sync.url"
-      value = var.oci_url
-    },
-    {
-      name  = "instance.sync.path"
-      value = var.oci_path
-    },
-    {
-      name  = "instance.sync.ref"
-      value = var.oci_tag
-    },
-    {
-      name  = "instance.sync.pullSecret"
-      value = "ghcr-auth"
-    },
-    {
-      name  = "healthcheck.enabled"
-      value = "true"
-      type  = "auto"
-    },
+  values = [
+    templatefile("${path.module}/values/instance.yaml", {
+
+      distribution_version  = var.flux_version
+      distribution_registry = var.flux_registry
+      distribution_artifact = "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests:latest"
+
+      sync_kind        = "OCIRepository"
+      sync_url         = var.oci_url
+      sync_path        = var.oci_path
+      sync_ref         = var.oci_tag
+      sync_pull_secret = "ghcr-auth"
+
+      cluster_domain = var.cluster_domain
+    })
   ]
 }

@@ -12,10 +12,10 @@ spec:
       name: imageupdateautomations.image.toolkit.fluxcd.io
   inputs:
     - namespace: "apps"
-      repository: "https://github.com/controlplaneio-fluxcd/d2-apps.git"
+      repository: "https://github.com/1ab-io/d2-apps.git"
       pushBranch: "image-updates"
     - namespace: "infra"
-      repository: "https://github.com/controlplaneio-fluxcd/d2-infra.git"
+      repository: "https://github.com/1ab-io/d2-infra.git"
       pushBranch: "image-updates"
   resources:
     - apiVersion: v1
@@ -103,8 +103,8 @@ spec:
               branch: main
           commit:
             author:
-              email: controlplaneio-fluxcd-bot@users.noreply.github.com
-              name: controlplaneio-fluxcd-bot
+              email: 1ab-io-bot@users.noreply.github.com
+              name: 1ab-io-bot
             messageTemplate: |
               Automated image update
 

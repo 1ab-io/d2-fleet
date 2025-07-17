@@ -11,7 +11,7 @@
 > is a set of best practices and production-ready examples for using Flux Operator
 > and OCI Artifacts to manage the continuous delivery of Kubernetes infrastructure and
 > applications on multi-cluster multi-tenant environments.
-> 
+>
 > Download the guide: [Flux D2 Architectural Reference](https://raw.githubusercontent.com/controlplaneio-fluxcd/distribution/main/guides/ControlPlane_Flux_D2_Reference_Architecture_Guide.pdf)
 
 ## Scope and Access Control
