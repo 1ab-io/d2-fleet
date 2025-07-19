@@ -155,33 +155,33 @@ bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 
 	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --timeout=5m
 
-	kubectl --namespace=kube-system wait kustomization/cilium-controllers --for=create --timeout=5m
-	kubectl --namespace=kube-system patch kustomization/cilium-controllers \
-		--type=merge \
-		--patch='{"spec":{"suspend":true}}'
-
-	kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
-	# kubectl --namespace=kube-system annotate kustomization/cilium-controllers \
-	# 	"kustomize.toolkit.fluxcd.io/reconcile"="disabled" \
-	# 	--overwrite
-	kubectl --namespace=kube-system patch helmrelease/cilium \
-		--type=merge \
-		--patch='{"spec":{"values":{"k8sServiceHost":"kind-control-plane","k8sServicePort":6443}}}'
-
-	# Remove Talos CCM
-	kubectl --namespace=kube-system wait helmrelease/talos-ccm --for=create --timeout=5m
-	kubectl --namespace=kube-system delete helmrelease/talos-ccm ocirepository/talos-ccm ocirepository/talos-cloud-controller-manager-chart kustomization/talos-ccm-controllers --wait=false
-
-	# Wait for monitoring and apps
-	kubectl wait namespace/monitoring --for=create --timeout=5m
-	kubectl --namespace=monitoring wait kustomization/monitoring-controllers --for=condition=ready --timeout=5m
-	kubectl --namespace=monitoring wait kustomization/monitoring-configs --for=condition=ready --timeout=5m
-
-	kubectl wait namespace/backend --for=create --timeout=5m
-	kubectl --namespace=backend wait kustomization/apps --for=condition=ready --timeout=5m
-
-	kubectl wait namespace/frontend --for=create --timeout=5m
-	kubectl --namespace=frontend wait kustomization/apps --for=condition=ready --timeout=5m
+	# kubectl --namespace=kube-system wait kustomization/cilium-controllers --for=create --timeout=5m
+	# kubectl --namespace=kube-system patch kustomization/cilium-controllers \
+	# 	--type=merge \
+	# 	--patch='{"spec":{"suspend":true}}'
+	#
+	# kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
+	# # kubectl --namespace=kube-system annotate kustomization/cilium-controllers \
+	# # 	"kustomize.toolkit.fluxcd.io/reconcile"="disabled" \
+	# # 	--overwrite
+	# kubectl --namespace=kube-system patch helmrelease/cilium \
+	# 	--type=merge \
+	# 	--patch='{"spec":{"values":{"k8sServiceHost":"kind-control-plane","k8sServicePort":6443}}}'
+	#
+	# # Remove Talos CCM
+	# kubectl --namespace=kube-system wait helmrelease/talos-ccm --for=create --timeout=5m
+	# kubectl --namespace=kube-system delete helmrelease/talos-ccm ocirepository/talos-ccm ocirepository/talos-cloud-controller-manager-chart kustomization/talos-ccm-controllers --wait=false
+	#
+	# # Wait for monitoring and apps
+	# kubectl wait namespace/monitoring --for=create --timeout=5m
+	# kubectl --namespace=monitoring wait kustomization/monitoring-controllers --for=condition=ready --timeout=5m
+	# kubectl --namespace=monitoring wait kustomization/monitoring-configs --for=condition=ready --timeout=5m
+	#
+	# kubectl wait namespace/backend --for=create --timeout=5m
+	# kubectl --namespace=backend wait kustomization/apps --for=condition=ready --timeout=5m
+	#
+	# kubectl wait namespace/frontend --for=create --timeout=5m
+	# kubectl --namespace=frontend wait kustomization/apps --for=condition=ready --timeout=5m
 
 	# TODO: curl podinfo.cluster.local
 
