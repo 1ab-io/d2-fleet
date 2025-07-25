@@ -1,3 +1,6 @@
+---
+healthcheck:
+  enabled: true
 instance:
   distribution:
     version: ${distribution_version}
