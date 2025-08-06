@@ -1,0 +1,159 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: infra-gitlab
+  namespace: flux-system
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: "5m"
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: policies
+      namespace: flux-system
+      ready: true
+      readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
+  inputs:
+    - tenant: gitlab-agent
+      namespace: gitlab-agent
+      configs: false
+      tag: "${ARTIFACT_TAG}"
+      environment: "${ENVIRONMENT}"
+      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
+      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
+    - tenant: gitlab-runner
+      namespace: gitlab-runner
+      configs: false
+      tag: "${ARTIFACT_TAG}"
+      environment: "${ENVIRONMENT}"
+      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
+      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: << inputs.tenant >>
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: flux-runtime-env
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-env"
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: flux-runtime-info
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-info"
+        labels:
+          reconcile.fluxcd.io/watch: Enabled
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: b2-runtime-env
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/b2-runtime-env"
+          fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "velero" >>enabled<< else >>disabled<< end >>
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ghcr-auth
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/ghcr-auth"
+      type: kubernetes.io/dockerconfigjson
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: flux
+        namespace: << inputs.namespace >>
+      imagePullSecrets:
+        - name: ghcr-auth
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: flux-infra-<< inputs.tenant >>
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+        - kind: ServiceAccount
+          name: flux
+          namespace: << inputs.namespace >>
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: << inputs.tenant >>
+        namespace: << inputs.namespace >>
+      spec:
+        interval: 5m
+        serviceAccountName: flux
+        url: "oci://ghcr.io/1ab-io/d2-infra/<< inputs.tenant >>"
+        ref:
+          tag: << inputs.tag >>
+        verify:
+          provider: cosign
+          matchOIDCIdentity:
+            - issuer: ^https://token\.actions\.githubusercontent\.com$
+              subject: ^https://github\.com/1ab-io/d2-infra/\.github/workflows/<< inputs.artifactSubjectWorkflow >>\.yaml@<< inputs.artifactSubjectGitRef >>$
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: << inputs.tenant >>-controllers
+        namespace: << inputs.namespace >>
+      spec:
+        targetNamespace: << inputs.namespace >>
+        serviceAccountName: flux
+        interval: 30m
+        retryInterval: 5m
+        wait: true
+        timeout: 5m
+        sourceRef:
+          kind: OCIRepository
+          name: << inputs.tenant >>
+        path: "./controllers/<< inputs.environment >>"
+        prune: true
+        postBuild:
+          substituteFrom:
+            - kind: ConfigMap
+              name: flux-runtime-env
+            - kind: ConfigMap
+              name: flux-runtime-info
+            - kind: Secret
+              name: b2-runtime-env
+              optional: true
+    # TODO: optional / only if present
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: << inputs.tenant >>-configs
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
+      spec:
+        dependsOn:
+          - name: << inputs.tenant >>-controllers
+        targetNamespace: << inputs.namespace >>
+        serviceAccountName: flux
+        interval: 30m
+        retryInterval: 5m
+        wait: true
+        timeout: 5m
+        sourceRef:
+          kind: OCIRepository
+          name: << inputs.tenant >>
+        path: "./configs/<< inputs.environment >>"
+        prune: true
+        postBuild:
+          substituteFrom:
+            - kind: ConfigMap
+              name: flux-runtime-env
+            - kind: ConfigMap
+              name: flux-runtime-info
+            # - kind: Secret
+            #   name: b2-runtime-env
+            #   optional: true
