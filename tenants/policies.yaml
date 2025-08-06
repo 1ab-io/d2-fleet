@@ -23,7 +23,7 @@ spec:
           oci://ghcr.io/siderolabs/
           oci://ghcr.io/stefanprodan/charts/
           oci://registry-1.docker.io/bitnamicharts/
-          https://charts.gitlab.io/
+          https://charts.gitlab.io
     - apiVersion: admissionregistration.k8s.io/v1
       kind: ValidatingAdmissionPolicy
       metadata:
