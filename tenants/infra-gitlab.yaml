@@ -50,14 +50,6 @@ spec:
     - apiVersion: v1
       kind: Secret
       metadata:
-        name: b2-runtime-env
-        namespace: << inputs.namespace >>
-        annotations:
-          fluxcd.controlplane.io/copyFrom: "flux-system/b2-runtime-env"
-          fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "velero" >>enabled<< else >>disabled<< end >>
-    - apiVersion: v1
-      kind: Secret
-      metadata:
         name: ghcr-auth
         namespace: << inputs.namespace >>
         annotations:
@@ -103,6 +95,8 @@ spec:
       metadata:
         name: << inputs.tenant >>
         namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/reconcile: << if eq inputs.reconcile true >>enabled<< else >>disabled<< end >>
       spec:
         targetNamespace: << inputs.namespace >>
         serviceAccountName: flux
@@ -121,6 +115,3 @@ spec:
               name: flux-runtime-env
             - kind: ConfigMap
               name: flux-runtime-info
-            # - kind: Secret
-            #   name: b2-runtime-env
-            #   optional: true
