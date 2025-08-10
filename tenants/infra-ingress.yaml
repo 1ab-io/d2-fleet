@@ -23,6 +23,10 @@ spec:
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
     - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: << get inputs "namespace" | default inputs.tenant >>
+    - apiVersion: v1
       kind: ConfigMap
       metadata:
         name: flux-runtime-env
