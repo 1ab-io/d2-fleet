@@ -33,14 +33,14 @@ spec:
       kind: ConfigMap
       metadata:
         name: flux-runtime-env
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
           fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-env"
     - apiVersion: v1
       kind: ConfigMap
       metadata:
         name: flux-runtime-info
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
           fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-info"
         labels:
@@ -49,7 +49,7 @@ spec:
       kind: Secret
       metadata:
         name: ghcr-auth
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
           fluxcd.controlplane.io/copyFrom: "flux-system/ghcr-auth"
       type: kubernetes.io/dockerconfigjson
@@ -57,7 +57,7 @@ spec:
       kind: ServiceAccount
       metadata:
         name: flux
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
       imagePullSecrets:
         - name: ghcr-auth
     - apiVersion: rbac.authorization.k8s.io/v1
@@ -71,12 +71,12 @@ spec:
       subjects:
         - kind: ServiceAccount
           name: flux
-          namespace: << inputs.namespace >>
+          namespace: << get inputs "namespace" | default inputs.tenant >>
     - apiVersion: source.toolkit.fluxcd.io/v1
       kind: OCIRepository
       metadata:
         name: << inputs.tenant >>
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
       spec:
         interval: 5m
         serviceAccountName: flux
@@ -92,11 +92,11 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>
-        namespace: << inputs.namespace >>
+        namespace: << get inputs "namespace" | default inputs.tenant >>
         # annotations:
         #   fluxcd.controlplane.io/reconcile: << if eq inputs.reconcile true >>enabled<< else >>disabled<< end >>
       spec:
-        targetNamespace: << inputs.namespace >>
+        targetNamespace: << get inputs "namespace" | default inputs.tenant >>
         serviceAccountName: flux
         interval: 30m
         retryInterval: 5m
