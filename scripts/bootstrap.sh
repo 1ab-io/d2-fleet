@@ -85,6 +85,7 @@ fi
 # if kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; then kubectl --namespace=flux-system delete configmap flux-runtime-env; fi
 if ! kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; then
   kubectl --namespace=flux-system create configmap flux-runtime-env \
+    --from-literal=BASE_DOMAIN=cluster.local \
     --from-literal=CLUSTER_DOMAIN=cluster.local \
     --from-literal=CLUSTER_NAME="$CLUSTER_NAME" \
     --from-literal=HOSTNAME_CP1="$HOSTNAME_CP1" \
@@ -112,9 +113,6 @@ kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --t
 #   --patch='{"spec":{"suspend":true}}'
 
 # kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
-# kubectl --namespace=kube-system annotate kustomization/cilium-controllers \
-#   ustomize.toolkit.fluxcd.io/reconcile"="disabled" \
-#   overwrite
 # kubectl --namespace=kube-system patch helmrelease/cilium \
 #   --type=merge \
 #   --patch='{"spec":{"values":{"k8sServiceHost":"kind-control-plane","k8sServicePort":6443}}}'

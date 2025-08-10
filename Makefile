@@ -32,20 +32,21 @@ TALOS_VERSION ?= 1.10.4
 WAIT ?= true
 TIMEOUT ?= 5m
 
+DOCKER ?= docker
 IPV4_ADDRESS ?= 10.5.0.2
 
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
-	sh ./scripts/kind.sh
+	DOCKER=$(DOCKER) sh ./scripts/kind.sh
 
 cluster-debug: ## Debug cluster
-	# docker logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
+	# $(DOCKER) logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
 	kubectl config current-context
 	kubectl cluster-info --context kind-kind
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
-	kind delete cluster
-	docker stop kind-registry
-	docker rm --force kind-registry
+	KIND_EXPERIMENTAL_PROVIDER="$(DOCKER)" kind delete cluster
+	$(DOCKER) stop kind-registry
+	$(DOCKER) rm --force kind-registry
 
 talos-up: ## Creates a Kubernetes Talos cluste
 	echo "cluster: { network: { cni: { name: none } }, proxy: { disabled: true } }" \
@@ -64,7 +65,7 @@ talos-up: ## Creates a Kubernetes Talos cluste
 	kubectl config get-contexts
 
 talos-debug: ## Debug cluster
-	# docker logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
+	# $(DOCKER) logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
 	# talosctl dashboard --cluster=admin@talos-default --nodes=$(IPV4_ADDRESS)
 
 	talosctl config info

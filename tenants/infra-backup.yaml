@@ -1,7 +1,7 @@
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
-  name: infra
+  name: infra-backup
   namespace: flux-system
   annotations:
     fluxcd.controlplane.io/reconcileEvery: "5m"
@@ -14,47 +14,12 @@ spec:
       ready: true
       readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
   inputs:
-    - tenant: cert-manager
-      configs: true
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: cilium
-      namespace: kube-system
-      configs: true
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: external-secrets
-      configs: false
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    # - tenant: flux-operator
-    #   namespace: flux-system
-    #   tag: "${ARTIFACT_TAG}"
-    #   environment: "${ENVIRONMENT}"
-    #   artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-    #   artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: monitoring
-      configs: true
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: talos-ccm
-      namespace: kube-system
-      configs: false
+    - tenant: velero
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
-    # FIXME: merge labels if present in d2-infra
-    # components/monitoring/controllers/base/namespace.yaml
     - apiVersion: v1
       kind: Namespace
       metadata:
@@ -82,34 +47,8 @@ spec:
               name: flux-runtime-env
             - kind: ConfigMap
               name: flux-runtime-info
-    # TODO: optional / only if present
-    - apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: << inputs.tenant >>-configs
-        namespace: << get inputs "namespace" | default inputs.tenant >>
-        annotations:
-          fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
-      spec:
-        dependsOn:
-          - name: << inputs.tenant >>-controllers
-        targetNamespace: << get inputs "namespace" | default inputs.tenant >>
-        serviceAccountName: flux
-        interval: 30m
-        retryInterval: 5m
-        wait: true
-        timeout: 5m
-        sourceRef:
-          kind: OCIRepository
-          name: << inputs.tenant >>
-        path: "./configs/<< inputs.environment >>"
-        prune: true
-        postBuild:
-          substituteFrom:
-            - kind: ConfigMap
-              name: flux-runtime-env
-            - kind: ConfigMap
-              name: flux-runtime-info
+            - kind: Secret
+              name: b2-runtime-env
 
     - apiVersion: v1
       kind: ConfigMap
@@ -127,6 +66,14 @@ spec:
           fluxcd.controlplane.io/copyFrom: "flux-system/flux-runtime-info"
         labels:
           reconcile.fluxcd.io/watch: Enabled
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: b2-runtime-env
+        namespace: << get inputs "namespace" | default inputs.tenant >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "flux-system/b2-runtime-env"
+          # fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "velero" >>enabled<< else >>disabled<< end >>
     - apiVersion: v1
       kind: Secret
       metadata:
