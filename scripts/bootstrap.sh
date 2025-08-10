@@ -87,6 +87,7 @@ if ! kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; 
   kubectl --namespace=flux-system create configmap flux-runtime-env \
     --from-literal=CLUSTER_DOMAIN=cluster.local \
     --from-literal=CLUSTER_NAME="$CLUSTER_NAME" \
+    --from-literal=HOSTNAME_CP1="$HOSTNAME_CP1" \
     --from-literal=WHITELIST_SOURCE_RANGE="127.0.0.1/32"
 fi
 
@@ -110,7 +111,7 @@ kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --t
 #   --type=merge \
 #   --patch='{"spec":{"suspend":true}}'
 
-kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
+# kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
 # kubectl --namespace=kube-system annotate kustomization/cilium-controllers \
 #   ustomize.toolkit.fluxcd.io/reconcile"="disabled" \
 #   overwrite
