@@ -190,3 +190,11 @@ spec:
           matchOIDCIdentity:
             - issuer: ^https://token\.actions\.githubusercontent\.com$
               subject: ^https://github\.com/1ab-io/d2-infra/\.github/workflows/<< inputs.artifactSubjectWorkflow >>\.yaml@<< inputs.artifactSubjectGitRef >>$
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: bitwarden-tls-certs
+        namespace: << get inputs "namespace" | default inputs.tenant >>
+        annotations:
+          fluxcd.controlplane.io/copyFrom: "cert-manager/bitwarden-tls-certs"
+          fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "external-secrets" >>enabled<< else >>disabled<< end >>
