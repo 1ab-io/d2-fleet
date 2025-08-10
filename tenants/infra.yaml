@@ -178,7 +178,7 @@ spec:
       kind: OCIRepository
       metadata:
         name: << inputs.tenant >>
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
       spec:
         interval: 5m
         serviceAccountName: flux
