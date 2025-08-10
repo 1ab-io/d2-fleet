@@ -15,18 +15,20 @@ spec:
       readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
   inputs:
     - tenant: gitlab-agent
-      namespace: gitlab-agent
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
     - tenant: gitlab-runner
-      namespace: gitlab-runner
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: << get inputs "namespace" | default inputs.tenant >>
     - apiVersion: v1
       kind: ConfigMap
       metadata:
