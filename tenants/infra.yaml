@@ -63,10 +63,12 @@ spec:
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
-    - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: << inputs.tenant >>
+    # FIXME: merge labels if present in d2-infra
+    # components/monitoring/controllers/base/namespace.yaml
+    # - apiVersion: v1
+    #   kind: Namespace
+    #   metadata:
+    #     name: << inputs.namespace >>
     - apiVersion: v1
       kind: ConfigMap
       metadata:
