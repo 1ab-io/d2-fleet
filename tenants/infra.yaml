@@ -63,18 +63,11 @@ spec:
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
-    # FIXME: merge labels if present in d2-infra
-    # components/monitoring/controllers/base/namespace.yaml
-    # - apiVersion: v1
-    #   kind: Namespace
-    #   metadata:
-    #     name: << inputs.namespace >>
-
     - apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-controllers
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
       spec:
         targetNamespace: << inputs.namespace >>
         serviceAccountName: flux
@@ -101,7 +94,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-configs
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
         annotations:
           fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
       spec:

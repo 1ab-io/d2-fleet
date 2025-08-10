@@ -23,10 +23,6 @@ spec:
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
     - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: << inputs.tenant >>
-    - apiVersion: v1
       kind: ConfigMap
       metadata:
         name: flux-runtime-env
@@ -89,7 +85,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-controllers
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
       spec:
         targetNamespace: << inputs.namespace >>
         serviceAccountName: flux
@@ -113,7 +109,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-configs
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
         annotations:
           fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
       spec:
