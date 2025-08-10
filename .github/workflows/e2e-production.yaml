@@ -2,8 +2,8 @@ name: e2e-production
 
 on:
   workflow_dispatch:
-  push:
-    tags: ["*"]
+  # push:
+  #   tags: ["*"]
 
 jobs:
   e2e:

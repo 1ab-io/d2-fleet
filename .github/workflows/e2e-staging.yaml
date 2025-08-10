@@ -2,8 +2,8 @@ name: e2e-staging
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
+  # push:
+  #   branches: ["main"]
 
 jobs:
   e2e:
