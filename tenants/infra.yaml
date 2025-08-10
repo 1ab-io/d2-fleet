@@ -69,6 +69,65 @@ spec:
     #   kind: Namespace
     #   metadata:
     #     name: << inputs.namespace >>
+
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: << inputs.tenant >>-controllers
+        namespace: << inputs.namespace >>
+      spec:
+        targetNamespace: << inputs.namespace >>
+        serviceAccountName: flux
+        interval: 30m
+        retryInterval: 5m
+        wait: true
+        timeout: 5m
+        sourceRef:
+          kind: OCIRepository
+          name: << inputs.tenant >>
+        path: "./controllers/<< inputs.environment >>"
+        prune: true
+        postBuild:
+          substituteFrom:
+            - kind: ConfigMap
+              name: flux-runtime-env
+            - kind: ConfigMap
+              name: flux-runtime-info
+            - kind: Secret
+              name: b2-runtime-env
+              optional: true
+    # TODO: optional / only if present
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: << inputs.tenant >>-configs
+        namespace: << inputs.namespace >>
+        annotations:
+          fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
+      spec:
+        dependsOn:
+          - name: << inputs.tenant >>-controllers
+        targetNamespace: << inputs.namespace >>
+        serviceAccountName: flux
+        interval: 30m
+        retryInterval: 5m
+        wait: true
+        timeout: 5m
+        sourceRef:
+          kind: OCIRepository
+          name: << inputs.tenant >>
+        path: "./configs/<< inputs.environment >>"
+        prune: true
+        postBuild:
+          substituteFrom:
+            - kind: ConfigMap
+              name: flux-runtime-env
+            - kind: ConfigMap
+              name: flux-runtime-info
+            # - kind: Secret
+            #   name: b2-runtime-env
+            #   optional: true
+
     - apiVersion: v1
       kind: ConfigMap
       metadata:
@@ -136,60 +195,3 @@ spec:
           matchOIDCIdentity:
             - issuer: ^https://token\.actions\.githubusercontent\.com$
               subject: ^https://github\.com/1ab-io/d2-infra/\.github/workflows/<< inputs.artifactSubjectWorkflow >>\.yaml@<< inputs.artifactSubjectGitRef >>$
-    - apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: << inputs.tenant >>-controllers
-        namespace: << inputs.namespace >>
-      spec:
-        targetNamespace: << inputs.namespace >>
-        serviceAccountName: flux
-        interval: 30m
-        retryInterval: 5m
-        wait: true
-        timeout: 5m
-        sourceRef:
-          kind: OCIRepository
-          name: << inputs.tenant >>
-        path: "./controllers/<< inputs.environment >>"
-        prune: true
-        postBuild:
-          substituteFrom:
-            - kind: ConfigMap
-              name: flux-runtime-env
-            - kind: ConfigMap
-              name: flux-runtime-info
-            - kind: Secret
-              name: b2-runtime-env
-              optional: true
-    # TODO: optional / only if present
-    - apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: << inputs.tenant >>-configs
-        namespace: << inputs.namespace >>
-        annotations:
-          fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
-      spec:
-        dependsOn:
-          - name: << inputs.tenant >>-controllers
-        targetNamespace: << inputs.namespace >>
-        serviceAccountName: flux
-        interval: 30m
-        retryInterval: 5m
-        wait: true
-        timeout: 5m
-        sourceRef:
-          kind: OCIRepository
-          name: << inputs.tenant >>
-        path: "./configs/<< inputs.environment >>"
-        prune: true
-        postBuild:
-          substituteFrom:
-            - kind: ConfigMap
-              name: flux-runtime-env
-            - kind: ConfigMap
-              name: flux-runtime-info
-            # - kind: Secret
-            #   name: b2-runtime-env
-            #   optional: true
