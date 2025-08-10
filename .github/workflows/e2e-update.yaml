@@ -2,54 +2,54 @@ name: e2e-update
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: 0 8 * * 1
+  # schedule:
+  #   - cron: 0 8 * * 1
 
 jobs:
   image-update:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup Flux
-      uses: controlplaneio-fluxcd/distribution/actions/setup@main
-    - name: Setup Helm
-      uses: fluxcd/pkg/actions/helm@main
-    - name: Setup Kubernetes
-      uses: helm/kind-action@main
-    - name: Bootstrap Flux
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       # for GHCR access
-        GH_UPDATE_TOKEN: ${{ secrets.GH_UPDATE_TOKEN }} # for GitHub repos write access
-      run: |
-        make bootstrap-update
-    - name: Run image automation
-      run: |
-        resources=(
-          ResourceSet/flux-system/image-update-automation
-          Kustomization/apps/apps
-          ImageUpdateAutomation/apps/apps
-          Kustomization/infra/infra
-          ImageUpdateAutomation/infra/infra
-        )
+      - uses: actions/checkout@v4
+      - name: Setup Flux
+        uses: controlplaneio-fluxcd/distribution/actions/setup@main
+      - name: Setup Helm
+        uses: fluxcd/pkg/actions/helm@main
+      - name: Setup Kubernetes
+        uses: helm/kind-action@main
+      - name: Bootstrap Flux
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # for GHCR access
+          GH_UPDATE_TOKEN: ${{ secrets.GH_UPDATE_TOKEN }} # for GitHub repos write access
+        run: |
+          make bootstrap-update
+      - name: Run image automation
+        run: |
+          resources=(
+            ResourceSet/flux-system/image-update-automation
+            Kustomization/apps/apps
+            ImageUpdateAutomation/apps/apps
+            Kustomization/infra/infra
+            ImageUpdateAutomation/infra/infra
+          )
 
-        for resource in "${resources[@]}"; do
-          kind=$(echo $resource | awk -F/ '{print $1}')
-          namespace=$(echo $resource | awk -F/ '{print $2}')
-          name=$(echo $resource | awk -F/ '{print $3}')
+          for resource in "${resources[@]}"; do
+            kind=$(echo $resource | awk -F/ '{print $1}')
+            namespace=$(echo $resource | awk -F/ '{print $2}')
+            name=$(echo $resource | awk -F/ '{print $3}')
 
-          kubectl -n $namespace wait $kind/$name --for=condition=ready --timeout=5m
-        done
-    - name: Image automation status
-      run: |
-        flux -n apps get all
-        flux -n infra get all
-    - name: Debug failure
-      if: failure()
-      run: |
-        kubectl -n flux-system get all
-        kubectl -n flux-system logs deploy/flux-operator
-        kubectl -n flux-system logs deploy/source-controller
-        kubectl -n flux-system logs deploy/kustomize-controller
-        kubectl -n flux-system logs deploy/image-reflector-controller
-        kubectl -n flux-system logs deploy/image-automation-controller
-        flux get all --all-namespaces
+            kubectl -n $namespace wait $kind/$name --for=condition=ready --timeout=5m
+          done
+      - name: Image automation status
+        run: |
+          flux -n apps get all
+          flux -n infra get all
+      - name: Debug failure
+        if: failure()
+        run: |
+          kubectl -n flux-system get all
+          kubectl -n flux-system logs deploy/flux-operator
+          kubectl -n flux-system logs deploy/source-controller
+          kubectl -n flux-system logs deploy/kustomize-controller
+          kubectl -n flux-system logs deploy/image-reflector-controller
+          kubectl -n flux-system logs deploy/image-automation-controller
+          flux get all --all-namespaces
