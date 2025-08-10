@@ -73,7 +73,7 @@ spec:
       kind: OCIRepository
       metadata:
         name: << inputs.tenant >>
-        namespace: flux-system # << inputs.namespace >>
+        namespace: << inputs.namespace >>
       spec:
         interval: 5m
         serviceAccountName: flux
@@ -89,7 +89,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-controllers
-        namespace: flux-system # << inputs.namespace >>
+        namespace: << inputs.namespace >>
       spec:
         targetNamespace: << inputs.namespace >>
         serviceAccountName: flux
@@ -113,7 +113,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-configs
-        namespace: flux-system # << inputs.namespace >>
+        namespace: << inputs.namespace >>
         annotations:
           fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
       spec:
