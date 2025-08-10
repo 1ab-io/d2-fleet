@@ -28,10 +28,6 @@ spec:
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
   resources:
     - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: << inputs.tenant >>
-    - apiVersion: v1
       kind: ConfigMap
       metadata:
         name: flux-runtime-env
@@ -94,7 +90,7 @@ spec:
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>
-        namespace: << inputs.namespace >>
+        namespace: flux-system # << inputs.namespace >>
         # annotations:
         #   fluxcd.controlplane.io/reconcile: << if eq inputs.reconcile true >>enabled<< else >>disabled<< end >>
       spec:
@@ -106,7 +102,7 @@ spec:
         timeout: 5m
         sourceRef:
           kind: OCIRepository
-          name: << inputs.tenant >>
+          name: flux-system # << inputs.tenant >>
         path: "./<< inputs.environment >>"
         prune: true
         postBuild:
