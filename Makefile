@@ -48,7 +48,7 @@ cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
 	$(DOCKER) stop kind-registry
 	$(DOCKER) rm --force kind-registry
 
-talos-up: ## Creates a Kubernetes Talos cluste
+talos-up: ## Creates a Kubernetes Talos cluster
 	echo "cluster: { network: { cni: { name: none } }, proxy: { disabled: true } }" \
 	  >"/tmp/patch.yaml"
 	talosctl cluster create --name=$(CLUSTER_NAME) --provisioner=$(PROVISIONER) \
@@ -109,7 +109,7 @@ bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=staging IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
 
 	curl podinfo.cluster.local \
-		--resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)"	\
+		--resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)" \
 		-H 'Accept: application/json'
 
 
