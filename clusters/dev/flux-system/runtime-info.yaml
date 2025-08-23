@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flux-runtime-info
+  namespace: flux-system
+  labels:
+    toolkit.fluxcd.io/runtime: "true"
+    reconcile.fluxcd.io/watch: Enabled
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: "Merge"
+data:
+  ARTIFACT_TAG: latest
+  ENVIRONMENT: staging # development
+  # CLUSTER_NAME: dev-1
+  # CLUSTER_DOMAIN: dev1.example.com
+  ARTIFACT_SUBJECT_WORKFLOW: push-artifact
+  ARTIFACT_SUBJECT_GIT_REF: refs/heads/main
