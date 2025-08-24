@@ -11,7 +11,7 @@ Create a Kubernetes cluster using KinD:
 kind create cluster --name flux-staging
 ```
 
-Install the Flux Operator and deploy the Flux instance on the staging cluster 
+Install the Flux Operator and deploy the Flux instance on the staging cluster
 set as the default context in the `~/.kube/config` file:
 
 ```shell
