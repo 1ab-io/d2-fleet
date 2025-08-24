@@ -1,0 +1,25 @@
+---
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+  - repo: local
+    hooks:
+      - id: flux-operator
+        name: flux-operator build instance
+        entry: sh -c "flux-operator build instance --filename=$1"
+        language: system
+        types: [yaml]
+        files: ^clusters/.*/flux-system/flux-instance.yaml$
+      - id: flux-operator
+        name: flux-operator build resourceset
+        entry: sh -c "flux-operator build resourceset --filename=$1"
+        language: system
+        types: [yaml]
+        files: ^tenants/.*.yaml$
