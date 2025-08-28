@@ -90,8 +90,6 @@ spec:
       metadata:
         name: << inputs.tenant >>
         namespace: << get inputs "namespace" | default inputs.tenant >>
-        # annotations:
-        #   fluxcd.controlplane.io/reconcile: << if eq inputs.reconcile true >>enabled<< else >>disabled<< end >>
       spec:
         targetNamespace: << get inputs "namespace" | default inputs.tenant >>
         serviceAccountName: flux

@@ -13,13 +13,13 @@ repos:
     hooks:
       - id: flux-operator
         name: flux-operator build instance
-        entry: sh -c "flux-operator build instance --filename=$1"
+        entry: sh -c "[ $# -eq 0 ] || flux-operator build instance --filename=$1"
         language: system
         types: [yaml]
         files: ^clusters/.*/flux-system/flux-instance.yaml$
       - id: flux-operator
         name: flux-operator build resourceset
-        entry: sh -c "flux-operator build resourceset --filename=$1"
+        entry: sh -c "[ $# -eq 0 ] || flux-operator build resourceset --filename=$1"
         language: system
         types: [yaml]
         files: ^tenants/.*.yaml$
