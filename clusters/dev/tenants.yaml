@@ -19,51 +19,13 @@ spec:
       - kind: ConfigMap
         name: flux-runtime-info
   patches:
-    - patch: |
+    - target:
+        kind: ResourceSet
+        name: infra-(github|gitlab|tailscale)
+        # labelSelector: "app.kubernetes.io/part-of=flux"
+      patch: |
         $patch: delete
         apiVersion: all
         kind: all
         metadata:
           name: all
-      target:
-        labelSelector: resourceset.fluxcd.controlplane.io/name=infra-github
-    - patch: |
-        $patch: delete
-        apiVersion: all
-        kind: all
-        metadata:
-          name: all
-      target:
-        labelSelector: app.kubernetes.io/part-of=github
-    - patch: |
-        $patch: delete
-        apiVersion: all.toolkit.fluxcd.io/v1
-        kind: all
-        metadata:
-          name: all
-      target:
-        labelSelector: resourceset.fluxcd.controlplane.io/name=infra-gitlab
-    - patch: |
-        $patch: delete
-        apiVersion: all
-        kind: all
-        metadata:
-          name: all
-      target:
-        labelSelector: app.kubernetes.io/part-of=gitlab
-    - patch: |
-        $patch: delete
-        apiVersion: all
-        kind: all
-        metadata:
-          name: all
-      target:
-        labelSelector: resourceset.fluxcd.controlplane.io/name=infra-tailscale
-    - patch: |
-        $patch: delete
-        apiVersion: all
-        kind: all
-        metadata:
-          name: all
-      target:
-        labelSelector: app.kubernetes.io/part-of=tailscale
