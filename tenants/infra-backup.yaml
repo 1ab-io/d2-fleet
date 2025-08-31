@@ -124,4 +124,4 @@ spec:
         namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
           fluxcd.controlplane.io/copyFrom: "cert-manager/bitwarden-tls-certs"
-          fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "external-secrets" >>enabled<< else >>disabled<< end >>
+          # fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "external-secrets" >>enabled<< else >>disabled<< end >>
