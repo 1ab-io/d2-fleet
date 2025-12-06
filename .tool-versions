@@ -1,4 +1,13 @@
 flux2 latest
 helm latest
 kubectl latest
-talosctl latest
+# talosctl latest
+jq
+opentofu
+packer
+pre
+shellcheck
+sops
+talosctl
+terragrunt
+prek
