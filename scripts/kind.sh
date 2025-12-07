@@ -9,6 +9,8 @@ DOCKER="${DOCKER:-docker}"
 if [ "$DOCKER" = podman ]; then
   export KIND_EXPERIMENTAL_PROVIDER="$DOCKER"
 fi
+CLUSTER_NAME="${CLUSTER_NAME:?}"
+CONTEXT_NAME="kind-${CLUSTER_NAME}"
 
 # 1. Create registry container unless it already exists
 reg_name='kind-registry'
@@ -20,13 +22,13 @@ if [ "$($DOCKER inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || tru
 fi
 
 # 2. Create kind cluster with containerd registry config dir enabled
-if ! kind get clusters 2>/dev/null | grep '^kind$'; then
-  kind create cluster --config=.github/kind.yaml
+if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+  kind create cluster --config=.github/kind.yaml --name="$CLUSTER_NAME" "$@"
 fi
 
-current_context="$(kubectl config current-context)"
-if [ "${current_context}" != 'kind-kind' ]; then
-  kubectl config use-context kind-kind
+current_context="$(kubectl config current-context || true)"
+if [ "$current_context" != "$CONTEXT_NAME" ] && kubectl config get-contexts "$CONTEXT_NAME" >/dev/null; then
+  kubectl config use-context "$CONTEXT_NAME"
 fi
 
 # 3. Add the registry config to the nodes

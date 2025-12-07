@@ -94,7 +94,7 @@ spec:
         name: << inputs.tenant >>
         namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
-          fluxcd.controlplane.io/reconcile: << if ne inputs.environment "development" >>enabled<< else >>disabled<< end >>
+          fluxcd.controlplane.io/reconcile: << if ne inputs.environment "dev" >>enabled<< else >>disabled<< end >>
       spec:
         targetNamespace: << get inputs "namespace" | default inputs.tenant >>
         serviceAccountName: flux

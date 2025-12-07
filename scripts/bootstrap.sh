@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eux
+set -eu
 
 retry() {
   max=5
@@ -11,50 +11,51 @@ retry() {
       echo "Failed to apply manifests after $max attempts"
       exit 1
     fi
-    echo "Attempt $retry/$max, waiting 60 seconds..."
-    sleep 60
+    echo "Attempt $retry/$max, waiting 10 seconds..."
+    sleep 10
   done
 }
 
 # BRANCH="${BRANCH:-main}"
 # BASE_URL="https://raw.githubusercontent.com/1ab-io/d2-infra/refs/heads/$BRANCH/manifests"
-case "$ENVIRONMENT" in
-development) ENV=dev ;;
-*) ENV="$ENVIRONMENT" ;;
-esac
+
+KUBERNETES_SERVICE_HOST="$CLUSTER_NAME-control-plane"
+KUBERNETES_SERVICE_PORT=6443
 
 # kubectl cluster-info
 current_context="$(kubectl config current-context)"
-if [ "$current_context" != kind-kind ]; then
-  echo >&2 "Invalid context: $current_context"
+if [ "$current_context" != "kind-$CLUSTER_NAME" ]; then
+  echo >&2 "Invalid context: $current_context, expected: kind-$CLUSTER_NAME"
   exit 1
 fi
 
-kubectl apply \
-  --filename=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/experimental-install.yaml \
-  --filename=https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/refs/heads/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
-
-# kubectl apply --filename="$BASE_URL/cert-manager.yaml" || true
-# --force-conflicts=true --server-side=true --wait=false
+tmp_dir="${TMPDIR:-${TMP:-/tmp}}"
+base_dir="$tmp_dir/d2-fleet-$ENVIRONMENT"
 
 helm_install() {
   name="$1"
   shift
   tag="$1"
   shift
-  dir="${TMP:-/tmp}/$name-$tag"
+  dir="$base_dir/$name-$tag"
   if ! [ -d "$dir" ]; then
     mkdir --parent "$dir"
   fi
   url="oci://ghcr.io/1ab-io/d2-infra/$name:$tag"
   flux pull artifact "$url" --output="$dir"
-  # kubectl apply --kustomize="$dir/controllers/$ENV"
+
   chart_name="$(yq -r .metadata.name "$dir/controllers/base/release.yaml")"
   namespace="$(yq -r .namespace "$dir/controllers/base/kustomization.yaml")"
   release_name="$(yq -r .spec.releaseName "$dir/controllers/base/release.yaml")"
   repo_name="$(yq -r .metadata.name "$dir/controllers/base/repository.yaml")"
   repo_url="$(yq -r .spec.url "$dir/controllers/base/repository.yaml")"
-  config="$dir/configs/$ENV"
+  # controllers="$dir/controllers/$ENVIRONMENT"
+  configs="$dir/configs/$ENVIRONMENT"
+  namespace_file="$dir/controllers/base/namespace.yaml"
+
+  if [ -f "$namespace_file" ]; then
+    kubectl apply --filename="$namespace_file"
+  fi
 
   values="$dir/values.yaml"
   yq .spec.values "$dir/controllers/base/release.yaml" >"$values"
@@ -79,30 +80,55 @@ helm_install() {
   if [ -n "$chart_version" ]; then
     set -- "$@" --version="$chart_version"
   fi
-  set -- "$@"
-  retry helm upgrade --install \
-    --namespace="$namespace" "$release_name" "$chart" \
-    --create-namespace \
-    --values="$values" \
-    "$@"
-  if [ -f "$config" ]; then
-    kubectl apply --kustomize="$config"
+  # retry helm upgrade --install
+  if ! helm status --namespace="$namespace" "$release_name" >/dev/null 2>&1 &&
+    ! helm get metadata --namespace="$namespace" "$release_name" >/dev/null 2>&1; then
+    echo >&2 "Installing Helm chart $namespace/$release_name"
+    retry helm install --namespace="$namespace" "$release_name" "$chart" \
+      --create-namespace \
+      --values="$values" \
+      "$@"
+  fi
+  if [ "$name" = cilium ]; then
+    kubectl wait crd/ciliumloadbalancerippools.cilium.io --for=create --timeout=5m
+  fi
+  # kubectl apply --kustomize="$controllers"
+  if [ -d "$configs" ]; then
+    # TODO: ignore namespace (4 keys)
+    if [ "$(yq 'keys | length' "$configs/kustomization.yaml")" -eq 3 ] &&
+      [ "$(yq -r '.resources | length' "$configs/kustomization.yaml")" -eq 0 ]; then
+      echo >&2 "No resources to apply: $configs/kustomization.yaml"
+      return
+    fi
+    echo >&2 "Applying kustomization: $configs"
+    retry kubectl apply --kustomize="$configs"
+    # kubectl kustomize "$configs" | kubectl apply --filename=- --wait=false
   fi
 }
 
-helm_install cert-manager latest
-# --set=tolerations[0].key=node.kubernetes.io/network-unavailable
-# --set=tolerations[1].key=node.kubernetes.io/not-ready
+set -x
 
-# Get repository from:
-# https://github.com/1ab-io/d2-infra/blob/main/components/cilium/controllers/base/repository.yaml
+# kubectl taint node "$CLUSTER_NAME-control-plane" node.kubernetes.io/not-ready:NoSchedule-
 
-# Get spec.values from:
-# https://github.com/1ab-io/d2-infra/blob/main/components/cilium/controllers/base/release.yaml
+# echo >&2 "Applying CRDs"
+kubectl apply --filename=https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml
+kubectl apply --filename=https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/experimental-install.yaml
+kubectl apply --filename=https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/refs/heads/main/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
 
-# release_url="$BASE_URL/components/cilium/controllers/base/release.yaml"
-# repository_url="$BASE_URL/components/cilium/controllers/base/repository.yaml"
-# kustomization_url="$BASE_URL/components/cilium/controllers/dev/kustomization.yaml"
+# kubectl apply --filename="$BASE_URL/cert-manager.yaml" || true
+# --force-conflicts=true --server-side=true --wait=false
+
+set +x
+
+helm_install cilium latest \
+  --set=k8sServiceHost="$KUBERNETES_SERVICE_HOST" \
+  --set=k8sServicePort="$KUBERNETES_SERVICE_PORT"
+
+helm_install cert-manager latest \
+  --set=crds.enabled=false # --skip-crds
+# --set=tolerations[0].key=node.kubernetes.io/network-unavailable \
+# --set=tolerations[1].key=node.kubernetes.io/not-ready \
+# --set=tolerations[2].key=node.kubernetes.io/unreachable \
 
 # curl -LSfs "$BASE_URL/cilium.yaml" |
 #   sed -e 's/"localhost"/"kind-control-plane"/g' -e 's/"7445"/"6443"/g' \
@@ -123,12 +149,8 @@ helm_install cert-manager latest
 # --filename=$BASE_URL/flux-operator.yaml
 # --filename=clusters/$ENVIRONMENT/flux-system/flux-instance.yaml"
 
-helm_install cilium latest \
-  --set=k8sServiceHost=kind-control-plane \
-  --set=k8sServicePort=6443
-
 # kubectl apply --filename=$BASE_URL/cilium.config.yaml
-HOSTNAME_CP1=kind-control-plane
+HOSTNAME_CP1="$CLUSTER_NAME-control-plane"
 cat >/tmp/cilium-lb-ip-pool-$HOSTNAME_CP1.yaml <<EOF
 ---
 apiVersion: cilium.io/v2alpha1
@@ -145,6 +167,7 @@ spec:
       app.kubernetes.io/name: ingress-nginx
       node: $HOSTNAME_CP1
 EOF
+echo >&2 "Applying cilium load balancer IP pool"
 kubectl apply --filename=/tmp/cilium-lb-ip-pool-$HOSTNAME_CP1.yaml
 
 # kubectl apply --filename="$BASE_URL/cert-manager.config.yaml"
@@ -162,55 +185,101 @@ kubectl apply --filename=/tmp/cilium-lb-ip-pool-$HOSTNAME_CP1.yaml
 # --set tolerations[1].key=node.kubernetes.io/not-ready
 helm_install flux-operator latest
 
-# if kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; then kubectl --namespace=flux-system delete configmap flux-runtime-env; fi
-if ! kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; then
-  kubectl --namespace=flux-system create configmap flux-runtime-env \
-    --from-literal=BASE_DOMAIN=cluster.local \
-    --from-literal=CLUSTER_DOMAIN=cluster.local \
-    --from-literal=CLUSTER_NAME="$CLUSTER_NAME" \
-    --from-literal=HOSTNAME_CP1="$HOSTNAME_CP1" \
-    --from-literal=WHITELIST_SOURCE_RANGE="127.0.0.1/32"
+# Fake b2-runtime-env secret in staging and production
+if [ "$ENVIRONMENT" = "staging" ] || [ "$ENVIRONMENT" = "production" ]; then
+  if ! kubectl get secret --namespace=flux-system b2-runtime-env >/dev/null; then
+    echo >&2 "Creating fake flux-system/b2-runtime-env secret"
+    kubectl create secret generic --namespace=flux-system b2-runtime-env \
+      --from-literal=B2_APPLICATION_KEY="application_key" \
+      --from-literal=B2_APPLICATION_KEY_ID="application_key_id" \
+      --from-literal=B2_BUCKET_NAME="bucket_name" \
+      --from-literal=B2_ENDPOINT="localhost" \
+      --from-literal=B2_REGION="region"
+  fi
 fi
 
-# if kubectl --namespace=flux-system get secret ghcr-auth >/dev/null; then kubectl --namespace=flux-system delete secret ghcr-auth; fi
-if ! kubectl --namespace=flux-system get secret ghcr-auth >/dev/null; then
-  kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
+# if kubectl --namespace=flux-system get configmap flux-runtime-env >/dev/null; then
+#   kubectl --namespace=flux-system delete configmap flux-runtime-env
+# fi
+if ! kubectl get configmap --namespace=flux-system flux-runtime-env >/dev/null; then
+  echo >&2 "Creating flux-system/flux-runtime-env configmap"
+  kubectl create configmap --namespace=flux-system flux-runtime-env \
+    --from-literal=BASE_DOMAIN="$IPV4_ADDRESS.nip.io" \
+    --from-literal=CLUSTER_DOMAIN=cluster.local \
+    --from-literal=CLUSTER_NAME="$CLUSTER_NAME" \
+    --from-literal=GROUP_NAME="1ab-io" \
+    --from-literal=HOSTNAME_CP1="$HOSTNAME_CP1" \
+    --from-literal=IPV4_ADDRESS="$IPV4_ADDRESS" \
+    --from-literal=WHITELIST_SOURCE_RANGE="127.0.0.1/32,172.18.0.1/32" # 10.5.0.1/32
+fi
+
+if ! kubectl get configmap --namespace=flux-system flux-runtime-info >/dev/null; then
+  echo >&2 "Creating flux-system/flux-runtime-info configmap"
+  kubectl create configmap --namespace=flux-system flux-runtime-info \
+    --from-literal=CCM="" \
+    --from-literal=CNI="cilium" \
+    --from-literal=KUBERNETES_SERVICE_HOST="$KUBERNETES_SERVICE_HOST" \
+    --from-literal=KUBERNETES_SERVICE_PORT="$KUBERNETES_SERVICE_PORT"
+fi
+
+if ! kubectl get secret --namespace=flux-system ghcr-auth >/dev/null; then
+  echo >&2 "Creating flux-system/ghcr-auth secret"
+  kubectl create secret docker-registry --namespace=flux-system ghcr-auth \
     --docker-server=ghcr.io \
     --docker-username=flux \
     --docker-password="$GITHUB_TOKEN" # || true
 fi
 
-# cat clusters/$ENV/flux-system/flux-instance.yaml \
+set -x
+
+# cat clusters/$ENVIRONMENT/flux-system/flux-instance.yaml \
 #   | CLUSTER_DOMAIN=cluster.local envsubst \
 #   | kubectl apply --filename=-
-kubectl apply --filename="clusters/$ENV/flux-system/flux-instance.yaml"
+kubectl apply --filename="clusters/$ENVIRONMENT/flux-system/flux-instance.yaml"
 
-kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --timeout=5m
+# # echo >&2 "Waiting for flux-system/flux-runtime-info configmap"
+# kubectl wait configmap/flux-runtime-info --namespace=flux-system --for=create --timeout=5m
+# # echo >&2 "Patching flux-system/flux-runtime-info configmap"
+# kubectl patch configmap/flux-runtime-info --namespace=flux-system --type=merge \
+#   --patch='{
+#   "metadata": {
+#     "annotations": {
+#       "fluxcd.controlplane.io/reconcile": "disabled"
+#     }
+#   },
+#   "data": {
+#     "CCM": "",
+#     "CNI": "cilium",
+#     "KUBERNETES_SERVICE_HOST": "'"$KUBERNETES_SERVICE_HOST"'",
+#     "KUBERNETES_SERVICE_PORT": "'"$KUBERNETES_SERVICE_PORT"'"
+#   }
+# }'
 
-# kubectl --namespace=kube-system wait kustomization/cilium-controllers --for=create --timeout=5m
-# kubectl --namespace=kube-system patch kustomization/cilium-controllers \
-#   --type=merge \
-#   --patch='{"spec":{"suspend":true}}'
+# kubectl wait --namespace=flux-system deployment/flux-operator --for=condition=available --timeout=5m
+# kubectl wait crd/helmreleases.helm.toolkit.fluxcd.io --for=create --timeout=5m
+kubectl wait --namespace=flux-system fluxinstance/flux --for=condition=ready --timeout=5m
+# kubectl wait --namespace=kube-system helmrelease/cilium --for=create --timeout=5m
 
-# kubectl --namespace=kube-system wait helmrelease/cilium --for=create --timeout=5m
-# kubectl --namespace=kube-system patch helmrelease/cilium \
-#   --type=merge \
-#   --patch='{"spec":{"values":{"k8sServiceHost":"kind-control-plane","k8sServicePort":6443}}}'
+# echo >&2 "Waiting for external-secrets"
+kubectl wait namespace/external-secrets --for=create --timeout=5m
+kubectl wait --namespace=external-secrets kustomization/external-secrets-controllers --for=create --timeout=5m
+kubectl wait --namespace=external-secrets kustomization/external-secrets-controllers --for=condition=ready --timeout=10m
+kubectl wait --namespace=external-secrets kustomization/external-secrets-configs --for=condition=ready --timeout=5m
 
-# # Remove Talos CCM
-# kubectl --namespace=kube-system wait helmrelease/talos-ccm --for=create --timeout=5m
-# kubectl --namespace=kube-system delete helmrelease/talos-ccm ocirepository/talos-ccm ocirepository/talos-cloud-controller-manager-chart kustomization/talos-ccm-controllers --wait=false
-#
-# # Wait for monitoring and apps
-# kubectl wait namespace/monitoring --for=create --timeout=5m
-# kubectl --namespace=monitoring wait kustomization/monitoring-controllers --for=condition=ready --timeout=5m
-# kubectl --namespace=monitoring wait kustomization/monitoring-configs --for=condition=ready --timeout=5m
+# echo >&2 "Waiting for monitoring"
+kubectl wait namespace/monitoring --for=create --timeout=5m
+kubectl wait --namespace=monitoring kustomization/monitoring-controllers --for=create --timeout=5m
+kubectl wait --namespace=monitoring kustomization/monitoring-controllers --for=condition=ready --timeout=10m
+kubectl wait --namespace=monitoring kustomization/monitoring-configs --for=condition=ready --timeout=5m
 
+# echo >&2 "Waiting for ingress-nginx"
 kubectl wait namespace/ingress-nginx --for=create --timeout=5m
-kubectl --namespace=ingress-nginx wait kustomization/ingress-nginx-controllers --for=condition=ready --timeout=5m
+kubectl wait --namespace=ingress-nginx kustomization/ingress-nginx-controllers --for=condition=ready --timeout=5m
 
+# echo >&2 "Waiting for backend"
 kubectl wait namespace/backend --for=create --timeout=5m
-kubectl --namespace=backend wait kustomization/apps --for=condition=ready --timeout=5m
+kubectl wait --namespace=backend kustomization/backend --for=condition=ready --timeout=5m
 
+# echo >&2 "Waiting for frontend"
 kubectl wait namespace/frontend --for=create --timeout=5m
-kubectl --namespace=frontend wait kustomization/apps --for=condition=ready --timeout=5m
+kubectl wait --namespace=frontend kustomization/frontend --for=condition=ready --timeout=5m

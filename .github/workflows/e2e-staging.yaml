@@ -2,12 +2,15 @@ name: e2e-staging
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches: ["main"]
+  push:
+    branches: ["main"]
+    paths:
+      - clusters/staging/
+      - tenants/
 
 jobs:
   e2e:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup Flux

@@ -1,10 +1,11 @@
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
-  name: infra
+  name: infra-ccm
   namespace: flux-system
   annotations:
     fluxcd.controlplane.io/reconcileEvery: "5m"
+    fluxcd.controlplane.io/reconcile: << if eq "${CCM}" "talos" >>enabled<< else >>disabled<< end >>
 spec:
   dependsOn:
     - apiVersion: fluxcd.controlplane.io/v1
@@ -13,62 +14,22 @@ spec:
       namespace: flux-system
       ready: true
       readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
-    # - apiVersion: fluxcd.controlplane.io/v1
-    #   kind: ResourceSet
-    #   name: infra-ccm
-    #   namespace: flux-system
-    #   ready: true
-    #   readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
-    - apiVersion: fluxcd.controlplane.io/v1
-      kind: ResourceSet
-      name: infra-external-secrets
-      namespace: flux-system
-      ready: true
-      readyExpr: status.conditions.filter(e, e.type == 'Ready').all(e, e.status == 'True')
   inputs:
-    - tenant: cert-manager
-      configs: true
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: cilium
+    - tenant: talos-ccm
       namespace: kube-system
-      configs: true
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-      # TODO: cni: "${CNI}"
-    # - tenant: flux-operator
-    #   namespace: flux-system
-    #   tag: "${ARTIFACT_TAG}"
-    #   environment: "${ENVIRONMENT}"
-    #   artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-    #   artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: monitoring
-      configs: true
-      tag: "${ARTIFACT_TAG}"
-      environment: "${ENVIRONMENT}"
-      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
-      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-      dependsOn:
-        - name: external-secrets-configs
-          namespace: external-secrets
   resources:
-    # FIXME: merge labels if present in d2-infra
-    # components/monitoring/controllers/base/namespace.yaml
-    - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: << get inputs "namespace" | default inputs.tenant >>
     - apiVersion: kustomize.toolkit.fluxcd.io/v1
       kind: Kustomization
       metadata:
         name: << inputs.tenant >>-controllers
         namespace: << get inputs "namespace" | default inputs.tenant >>
+        annotations:
+          fluxcd.controlplane.io/reconcile: << if eq "${CCM}" "talos" >>enabled<< else >>disabled<< end >>
       spec:
-        dependsOn: << get inputs "dependsOn" | default list | toYaml | nindent 4 >>
         targetNamespace: << get inputs "namespace" | default inputs.tenant >>
         serviceAccountName: flux
         interval: 30m
@@ -79,34 +40,6 @@ spec:
           kind: OCIRepository
           name: << inputs.tenant >>
         path: "./controllers/<< inputs.environment >>"
-        prune: true
-        postBuild:
-          substituteFrom:
-            - kind: ConfigMap
-              name: flux-runtime-env
-            - kind: ConfigMap
-              name: flux-runtime-info
-    # TODO: optional / only if present
-    - apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: << inputs.tenant >>-configs
-        namespace: << get inputs "namespace" | default inputs.tenant >>
-        annotations:
-          fluxcd.controlplane.io/reconcile: << if eq inputs.configs true >>enabled<< else >>disabled<< end >>
-      spec:
-        dependsOn:
-          - name: << inputs.tenant >>-controllers
-        targetNamespace: << get inputs "namespace" | default inputs.tenant >>
-        serviceAccountName: flux
-        interval: 30m
-        retryInterval: 5m
-        wait: true
-        timeout: 5m
-        sourceRef:
-          kind: OCIRepository
-          name: << inputs.tenant >>
-        path: "./configs/<< inputs.environment >>"
         prune: true
         postBuild:
           substituteFrom:
@@ -181,4 +114,3 @@ spec:
         namespace: << get inputs "namespace" | default inputs.tenant >>
         annotations:
           fluxcd.controlplane.io/copyFrom: "cert-manager/bitwarden-tls-certs"
-          fluxcd.controlplane.io/reconcile: << if eq inputs.tenant "external-secrets" >>enabled<< else >>disabled<< end >>

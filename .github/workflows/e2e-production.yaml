@@ -2,8 +2,11 @@ name: e2e-production
 
 on:
   workflow_dispatch:
-  # push:
-  #   tags: ["*"]
+  push:
+    tags: ["*"]
+    paths:
+      - clusters/production/
+      - tenants/
 
 jobs:
   e2e:

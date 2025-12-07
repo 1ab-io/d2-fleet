@@ -10,8 +10,9 @@ metadata:
     kustomize.toolkit.fluxcd.io/ssa: "Merge"
 data:
   ARTIFACT_TAG: latest
-  ENVIRONMENT: staging # development
+  ENVIRONMENT: dev # development
   # CLUSTER_NAME: dev-1
   # CLUSTER_DOMAIN: dev1.example.com
   ARTIFACT_SUBJECT_WORKFLOW: push-artifact
   ARTIFACT_SUBJECT_GIT_REF: refs/heads/main
+  # ARTIFACT_SUBJECT_GIT_REF: refs/heads/develop

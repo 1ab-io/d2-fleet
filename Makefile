@@ -22,7 +22,9 @@ help: ## Display this help.
 
 ##@ Cluster
 
-CLUSTER_NAME ?= talos-default
+# CLUSTER_NAME ?= kind # talos-default
+CLUSTER_NAME ?= chart-testing
+
 # NOTE: qemu requires sudo -E
 PROVISIONER ?= docker
 
@@ -33,20 +35,23 @@ WAIT ?= true
 TIMEOUT ?= 5m
 
 DOCKER ?= docker
-IPV4_ADDRESS ?= 10.5.0.2
+# IPV4_ADDRESS ?= 10.5.0.2
+IPV4_ADDRESS ?= 172.18.0.2
 
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
-	DOCKER=$(DOCKER) sh ./scripts/kind.sh
+	 CLUSTER_NAME="$(CLUSTER_NAME)" DOCKER="$(DOCKER)" sh ./scripts/kind.sh
+
+	docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(CLUSTER_NAME)-control-plane"
 
 cluster-debug: ## Debug cluster
 	# $(DOCKER) logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
 	kubectl config current-context
-	kubectl cluster-info --context kind-kind
+	kubectl cluster-info --context "kind-$(CLUSTER_NAME)"
 
 cluster-down: ## Shutdown the Kubernetes KinD cluster and the local registry.
-	KIND_EXPERIMENTAL_PROVIDER="$(DOCKER)" kind delete cluster
-	$(DOCKER) stop kind-registry
-	$(DOCKER) rm --force kind-registry
+	KIND_EXPERIMENTAL_PROVIDER="$(DOCKER)" kind delete cluster --name="$(CLUSTER_NAME)"
+	# $(DOCKER) stop kind-registry
+	# $(DOCKER) rm --force kind-registry
 
 talos-up: ## Creates a Kubernetes Talos cluster
 	echo "cluster: { network: { cni: { name: none } }, proxy: { disabled: true } }" \
@@ -105,39 +110,40 @@ push: ## Push the Kubernetes manifests to Github Container Registry.
 bootstrap-dev: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
 
-	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=development IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
+	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=dev IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
 
-	curl podinfo.cluster.local \
-		--resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)" \
-		-H 'Accept: application/json'
+	curl -k https://podinfo.$(CLUSTER_NAME).$(IPV4_ADDRESS).nip.io/version
 
 bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
 
 	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=staging IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
 
-	curl podinfo.cluster.local \
-		--resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)" \
-		-H 'Accept: application/json'
-
+	# curl podinfo.cluster.local/version --resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)"
+	curl -k https://podinfo.$(CLUSTER_NAME).$(IPV4_ADDRESS).nip.io/version
 
 bootstrap-production: ## Deploy Flux Operator on the production Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
 
-	helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
-	  --namespace flux-system \
-	  --create-namespace \
-	  --set multitenancy.enabled=true \
-	  --wait
+	# helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
+	#   --namespace flux-system \
+	#   --create-namespace \
+	#   --set multitenancy.enabled=true \
+	#   --wait
 
-	kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
-	  --docker-server=ghcr.io \
-	  --docker-username=flux \
-	  --docker-password=$$GITHUB_TOKEN
+	# kubectl --namespace=flux-system create secret docker-registry ghcr-auth \
+	#   --docker-server=ghcr.io \
+	#   --docker-username=flux \
+	#   --docker-password=$$GITHUB_TOKEN
 
-	kubectl apply --filename=clusters/production/flux-system/flux-instance.yaml
+	# kubectl apply --filename=clusters/production/flux-system/flux-instance.yaml
 
-	kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --timeout=5m
+	# kubectl --namespace=flux-system wait fluxinstance/flux --for=condition=ready --timeout=5m
+
+	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=production IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
+
+	# curl podinfo.cluster.local/version --resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)"
+	curl -k https://podinfo.$(CLUSTER_NAME).$(IPV4_ADDRESS).nip.io/version
 
 bootstrap-update: ## Deploy Flux Operator on the image update automation Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set for GHCR}
@@ -166,10 +172,11 @@ verify-cluster: # Verify cluster reconciliation
 	kubectl --namespace=flux-system wait Kustomization/flux-system --for=condition=ready --timeout=5m
 	kubectl --namespace=flux-system wait ResourceSet/infra --for=condition=ready --timeout=5m
 	kubectl --namespace=flux-system wait ResourceSet/apps --for=condition=ready --timeout=5m
-	kubectl --namespace=backend wait Kustomization/apps --for=condition=ready --timeout=5m
-	kubectl --namespace=frontend wait Kustomization/apps --for=condition=ready --timeout=5m
+	kubectl --namespace=backend wait Kustomization/backend --for=condition=ready --timeout=5m
+	kubectl --namespace=frontend wait Kustomization/frontend --for=condition=ready --timeout=5m
 
 debug-cluster: # Debug failure
+	kubectl get namespace
 	kubectl --namespace=flux-system get all
 	kubectl --namespace=flux-system logs deploy/flux-operator
 	kubectl --namespace=flux-system logs deploy/source-controller
