@@ -15,6 +15,7 @@ spec:
     - notification-controller
   cluster:
     type: kubernetes
+    size: small
     multitenant: true
     tenantDefaultServiceAccount: flux
     networkPolicy: true

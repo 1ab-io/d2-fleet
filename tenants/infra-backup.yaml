@@ -5,6 +5,8 @@ metadata:
   namespace: flux-system
   annotations:
     fluxcd.controlplane.io/reconcileEvery: "5m"
+    annotations:
+      fluxcd.controlplane.io/reconcile: << if ne inputs.environment "development" >>enabled<< else >>disabled<< end >>
 spec:
   dependsOn:
     - apiVersion: fluxcd.controlplane.io/v1

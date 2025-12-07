@@ -24,6 +24,11 @@ if ! kind get clusters 2>/dev/null | grep '^kind$'; then
   kind create cluster --config=.github/kind.yaml
 fi
 
+current_context="$(kubectl config current-context)"
+if [ "${current_context}" != 'kind-kind' ]; then
+  kubectl config use-context kind-kind
+fi
+
 # 3. Add the registry config to the nodes
 REGISTRY_DIR="/etc/containerd/certs.d/localhost:${reg_port}"
 for node in $(kind get nodes); do

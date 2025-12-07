@@ -102,6 +102,14 @@ push: ## Push the Kubernetes manifests to Github Container Registry.
 
 ##@ Flux
 
+bootstrap-dev: ## Deploy Flux Operator on the staging Kubernetes cluster.
+	@test $${GITHUB_TOKEN?Environment variable not set}
+
+	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=development IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
+
+	curl podinfo.cluster.local \
+		--resolve "podinfo.cluster.local:80:$(IPV4_ADDRESS)" \
+		-H 'Accept: application/json'
 
 bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}
