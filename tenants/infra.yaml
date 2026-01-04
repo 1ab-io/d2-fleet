@@ -46,6 +46,12 @@ spec:
     #   environment: "${ENVIRONMENT}"
     #   artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
     #   artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
+    - tenant: openebs
+      configs: false
+      tag: "${ARTIFACT_TAG}"
+      environment: "${ENVIRONMENT}"
+      artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
+      artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
     - tenant: monitoring
       configs: true
       tag: "${ARTIFACT_TAG}"
@@ -55,6 +61,8 @@ spec:
       dependsOn:
         - name: external-secrets-configs
           namespace: external-secrets
+        - name: openebs-controllers
+          namespace: openebs
   resources:
     # FIXME: merge labels if present in d2-infra
     # components/monitoring/controllers/base/namespace.yaml
