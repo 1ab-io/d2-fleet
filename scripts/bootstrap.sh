@@ -22,6 +22,9 @@ retry() {
 KUBERNETES_SERVICE_HOST="$CLUSTER_NAME-control-plane"
 KUBERNETES_SERVICE_PORT=6443
 
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}"
+IPV4_ADDRESS="$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$KUBERNETES_SERVICE_HOST")"
+
 # kubectl cluster-info
 current_context="$(kubectl config current-context)"
 if [ "$current_context" != "kind-$CLUSTER_NAME" ]; then
@@ -84,10 +87,7 @@ helm_install() {
   if ! helm status --namespace="$namespace" "$release_name" >/dev/null 2>&1 &&
     ! helm get metadata --namespace="$namespace" "$release_name" >/dev/null 2>&1; then
     echo >&2 "Installing Helm chart $namespace/$release_name"
-    retry helm install --namespace="$namespace" "$release_name" "$chart" \
-      --create-namespace \
-      --values="$values" \
-      "$@"
+    retry helm install --namespace="$namespace" "$release_name" "$chart" --create-namespace --values="$values" "$@"
   fi
   if [ "$name" = cilium ]; then
     kubectl wait crd/ciliumloadbalancerippools.cilium.io --for=create --timeout=5m
@@ -167,8 +167,8 @@ spec:
       app.kubernetes.io/name: ingress-nginx
       node: $HOSTNAME_CP1
 EOF
-echo >&2 "Applying cilium load balancer IP pool"
-kubectl apply --filename=/tmp/cilium-lb-ip-pool-$HOSTNAME_CP1.yaml
+echo >&2 "Applying cilium load balancer IP pool ($HOSTNAME_CP1: $IPV4_ADDRESS)"
+kubectl apply --filename="/tmp/cilium-lb-ip-pool-$HOSTNAME_CP1.yaml"
 
 # kubectl apply --filename="$BASE_URL/cert-manager.config.yaml"
 # retry kubectl apply --filename=$BASE_URL/cert-manager.config.yaml
@@ -277,9 +277,13 @@ kubectl wait namespace/ingress-nginx --for=create --timeout=5m
 kubectl wait --namespace=ingress-nginx kustomization/ingress-nginx-controllers --for=condition=ready --timeout=5m
 
 # echo >&2 "Waiting for backend"
-kubectl wait namespace/backend --for=create --timeout=5m
-kubectl wait --namespace=backend kustomization/backend --for=condition=ready --timeout=5m
+kubectl wait namespace/backend --for=create --timeout=1m
+kubectl wait --namespace=backend kustomization/backend --for=create --timeout=1m
+kubectl wait --namespace=backend kustomization/backend --for=condition=ready --timeout=1m
 
 # echo >&2 "Waiting for frontend"
-kubectl wait namespace/frontend --for=create --timeout=5m
-kubectl wait --namespace=frontend kustomization/frontend --for=condition=ready --timeout=5m
+kubectl wait namespace/frontend --for=create --timeout=1m
+kubectl wait --namespace=frontend kustomization/frontend --for=create --timeout=1m
+kubectl wait --namespace=frontend kustomization/frontend --for=condition=ready --timeout=1m
+
+curl -k "https://podinfo.$CLUSTER_NAME.$IPV4_ADDRESS.nip.io" # /version

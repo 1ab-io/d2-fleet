@@ -36,12 +36,10 @@ TIMEOUT ?= 5m
 
 DOCKER ?= docker
 # IPV4_ADDRESS ?= 10.5.0.2
-IPV4_ADDRESS ?= 172.18.0.2
+# IPV4_ADDRESS ?= 172.18.0.2
 
 cluster-up: ## Creates a Kubernetes KinD cluster and a local registry bind to localhost:5050.
 	 CLUSTER_NAME="$(CLUSTER_NAME)" DOCKER="$(DOCKER)" sh ./scripts/kind.sh
-
-	docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(CLUSTER_NAME)-control-plane"
 
 cluster-debug: ## Debug cluster
 	# $(DOCKER) logs $(CLUSTER_NAME)-controlplane-1 --follow --since=1m
@@ -87,7 +85,7 @@ talos-debug: ## Debug cluster
 	# kubectl config use-context admin@$(CLUSTER_NAME)
 	kubectl config get-contexts
 
-	talosctl get members --nodes=$(IPV4_ADDRESS)
+	# talosctl get members --nodes=$(IPV4_ADDRESS)
 
 	kubectl get nodes -o=wide
 
@@ -108,11 +106,8 @@ push: ## Push the Kubernetes manifests to Github Container Registry.
 ##@ Flux
 
 bootstrap-dev: ## Deploy Flux Operator on the staging Kubernetes cluster.
-	@test $${GITHUB_TOKEN?Environment variable not set}
-
-	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=dev IPV4_ADDRESS=$(IPV4_ADDRESS) ./scripts/bootstrap.sh
-
-	curl -k https://podinfo.$(CLUSTER_NAME).$(IPV4_ADDRESS).nip.io/version
+	# @test $${GITHUB_TOKEN?Environment variable not set}
+	CLUSTER_NAME="$(CLUSTER_NAME)" ENVIRONMENT=dev ./scripts/bootstrap.sh
 
 bootstrap-staging: ## Deploy Flux Operator on the staging Kubernetes cluster.
 	@test $${GITHUB_TOKEN?Environment variable not set}

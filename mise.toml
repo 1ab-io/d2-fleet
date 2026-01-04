@@ -1,3 +1,6 @@
 [env]
 _.file = ".env"
+
+[tools]
+kind = "latest"
 # _.path = ["scripts"]

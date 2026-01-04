@@ -3,11 +3,12 @@ helm latest
 kubectl latest
 # talosctl latest
 jq
+kind
 opentofu
 packer
 pre
+prek
 shellcheck
 sops
 talosctl
 terragrunt
-prek
