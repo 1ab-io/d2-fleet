@@ -15,8 +15,11 @@ spec:
         name: flux-operator
         namespace: flux-system
       spec:
-        interval: 10m
+        interval: 1h # 10m
         url: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
+        # layerSelector:
+        #   mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+        #   operation: copy
         ref:
           semver: "*"
         verify:
@@ -42,3 +45,36 @@ spec:
             defaultServiceAccount: flux-operator
           reporting:
             interval: 45s
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          # tolerations:
+          #   - key: node.kubernetes.io/network-unavailable
+          web:
+            ingress:
+              enabled: true
+              className: nginx
+              annotations:
+                cert-manager.io/cluster-issuer: selfsigned-issuer
+              hosts:
+                - host: &gitops-host gitops.local # .${CLUSTER_NAME}.${BASE_DOMAIN}
+                  paths:
+                    - pathType: Prefix
+                      path: /
+              tls:
+                - secretName: gitops-certs
+                  hosts:
+                    - *gitops-host
