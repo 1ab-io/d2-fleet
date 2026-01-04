@@ -5,8 +5,10 @@ metadata:
   namespace: flux-system
   annotations:
     fluxcd.controlplane.io/reconcileEvery: "5m"
-    fluxcd.controlplane.io/reconcile: << if eq "${CCM}" "talos" >>enabled<< else >>disabled<< end >>
 spec:
+  # commonMetadata:
+  #   annotations:
+  #     fluxcd.controlplane.io/reconcile: << if eq "${CCM}" "talos" >>enabled<< else >>disabled<< end >>
   dependsOn:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSet
