@@ -32,7 +32,7 @@ spec:
       environment: "${ENVIRONMENT}"
       artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
       artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: cilium
+    - tenant: cilium # network
       namespace: kube-system
       configs: true
       tag: "${ARTIFACT_TAG}"
@@ -46,7 +46,7 @@ spec:
     #   environment: "${ENVIRONMENT}"
     #   artifactSubjectWorkflow: "${ARTIFACT_SUBJECT_WORKFLOW}"
     #   artifactSubjectGitRef: "${ARTIFACT_SUBJECT_GIT_REF}"
-    - tenant: openebs
+    - tenant: openebs # storage
       configs: false
       tag: "${ARTIFACT_TAG}"
       environment: "${ENVIRONMENT}"
